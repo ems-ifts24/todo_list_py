@@ -1,0 +1,138 @@
+[
+  {
+    "id": 1,
+    "name": "Pagar VISA",
+    "priority": "ALTA",
+    "status": "PENDIENTE",
+    "created_at": "2025-09-02T00:38:20.883635",
+    "updated_at": "2025-09-02T00:38:20.883635"
+  },
+  {
+    "id": 2,
+    "name": "Pagar Amex",
+    "priority": "ALTA",
+    "status": "FINALIZADA",
+    "created_at": "2025-09-02T00:40:10.424272",
+    "updated_at": "2025-09-02T00:49:05.357752"
+  },
+  {
+    "id": 3,
+    "name": "Comprar zocalo entrepiso",
+    "priority": "BAJA",
+    "status": "PENDIENTE",
+    "created_at": "2025-09-02T00:42:41.351729",
+    "updated_at": "2025-09-02T00:42:41.351729"
+  },
+  {
+    "id": 4,
+    "name": "Pagar expensas",
+    "priority": "MEDIA",
+    "status": "FINALIZADA",
+    "created_at": "2025-09-02T00:43:47.363588",
+    "updated_at": "2025-09-02T00:44:32.298595"
+  },
+  {
+    "id": 5,
+    "name": "Limpiar oficina",
+    "priority": "MEDIA",
+    "status": "PENDIENTE",
+    "created_at": "2025-09-02T00:45:04.622708",
+    "updated_at": "2025-09-02T00:45:04.622708"
+  },
+  {
+    "id": 6,
+    "name": "Pintar terraza",
+    "priority": "MEDIA",
+    "status": "PENDIENTE",
+    "created_at": "2025-09-02T00:45:18.954727",
+    "updated_at": "2025-09-02T00:45:18.954727"
+  },
+  {
+    "id": 7,
+    "name": "Lavar Moto",
+    "priority": "BAJA",
+    "status": "PENDIENTE",
+    "created_at": "2025-09-02T00:45:36.893067",
+    "updated_at": "2025-09-02T00:45:36.893067"
+  },
+  {
+    "id": 8,
+    "name": "IngSoft Hacer TP presentación",
+    "priority": "MEDIA",
+    "status": "EN CURSO",
+    "created_at": "2025-09-02T00:46:24.220393",
+    "updated_at": "2025-09-02T00:47:38.307096"
+  },
+  {
+    "id": 9,
+    "name": "IngSoft Hacer TP Python",
+    "priority": "MEDIA",
+    "status": "EN CURSO",
+    "created_at": "2025-09-02T00:46:45.829558",
+    "updated_at": "2025-09-02T00:48:00.202937"
+  },
+  {
+    "id": 10,
+    "name": "Migrar DB proyecto SM",
+    "priority": "BAJA",
+    "status": "PENDIENTE",
+    "created_at": "2025-09-02T00:51:58.024118",
+    "updated_at": "2025-09-02T00:51:58.024118"
+  },
+  {
+    "id": 11,
+    "name": "Integrar MCP server",
+    "priority": "BAJA",
+    "status": "FINALIZADA",
+    "created_at": "2025-09-02T00:52:21.457736",
+    "updated_at": "2025-09-02T00:52:46.161478"
+  },
+  {
+    "id": 12,
+    "name": "Armar Frontend",
+    "priority": "ALTA",
+    "status": "PENDIENTE",
+    "created_at": "2025-09-02T00:53:46.965511",
+    "updated_at": "2025-09-02T00:53:46.965511"
+  },
+  {
+    "id": 13,
+    "name": "Testear TODO App",
+    "priority": "MEDIA",
+    "status": "EN CURSO",
+    "created_at": "2025-09-02T00:54:09.017880",
+    "updated_at": "2025-09-02T00:55:14.296080"
+  },
+  {
+    "id": 14,
+    "name": "Comprar Auriculares",
+    "priority": "ALTA",
+    "status": "PENDIENTE",
+    "created_at": "2025-09-02T00:56:16.965511",
+    "updated_at": "2025-09-02T00:56:16.965511"
+  },
+  {
+    "id": 15,
+    "name": "Comprar Router",
+    "priority": "BAJA",
+    "status": "PENDIENTE",
+    "created_at": "2025-09-02T00:58:16.965511",
+    "updated_at": "2025-09-02T00:58:16.965511"
+  },
+  {
+    "id": 16,
+    "name": "Comprar adaptador RS232",
+    "priority": "BAJA",
+    "status": "PENDIENTE",
+    "created_at": "2025-09-02T00:59:16.965511",
+    "updated_at": "2025-09-02T00:59:16.965511"
+  },
+  {
+    "id": 18,
+    "name": "Comprar carbón",
+    "priority": "BAJA",
+    "status": "PENDIENTE",
+    "created_at": "2025-09-02T01:11:34.886010",
+    "updated_at": "2025-09-02T01:11:34.886010"
+  }
+]
