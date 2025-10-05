@@ -6,7 +6,7 @@ Aplicación de línea de comandos para gestionar tareas pendientes con prioridad
 
 - ✅ Gestión de tareas (crear, listar, actualizar, eliminar)
 - 🏷️ Prioridades: ALTA, MEDIA, BAJA
-- 📊 Estados: PENDIENTE, EN_PROGRESO, COMPLETADA
+- 📊 Estados: PENDIENTE, EN CURSO, FINALIZADA
 - 📅 Fechas automáticas de creación
 - 📤 Exportación a CSV
 - 🔍 Búsqueda y filtrado de tareas
@@ -39,13 +39,13 @@ Aplicación de línea de comandos para gestionar tareas pendientes con prioridad
 
 ### Menú Principal
 ```
-=== Gestor de Tareas ===
-1. 📋 Listar tareas
-2. ➕ Agregar tarea
-3. ✏️ Actualizar tarea
-4. ❌ Eliminar tarea
-5. 🔍 Buscar tareas
-6. 📤 Exportar a CSV
+📋 GESTOR DE TAREAS
+1. 📝 Crear tarea
+2. 📋 Listar tareas
+3. 🔍 Buscar tarea por nombre
+4. ✏️  Actualizar tarea
+5. 🗑️  Eliminar tarea
+6. 💾 Exportar datos a CSV
 7. ❌ Salir
 ```
 
