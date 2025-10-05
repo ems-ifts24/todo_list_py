@@ -330,10 +330,39 @@ class GraphicsService:
             raise ValueError("Se deben seleccionar exactamente 4 gráficos")
         
         df = self._load_tasks_from_file(file_path)
+        total_tasks = len(df)
         
-        # Crear figura con subplots
-        fig, axes = plt.subplots(2, 2, figsize=(16, 12))
-        fig.suptitle('Dashboard de Análisis de Tareas', fontsize=16, fontweight='bold', y=0.995)
+        # Crear figura con subplots y márgenes ajustados
+        fig = plt.figure(figsize=(16, 15))  # Un poco más alto
+        
+        # Añadir título general con el total de registros
+        fig.suptitle(
+            f'Dashboard de Análisis de Tareas\nTotal de registros: {total_tasks:,}'.replace(',', '.'), 
+            fontsize=16, 
+            fontweight='bold',
+            y=0.98  # Un poco más arriba del borde superior
+        )
+        
+        # Definir la cuadrícula con márgenes personalizados
+        # left, right, top, bottom, wspace, hspace
+        gs = fig.add_gridspec(
+            nrows=2, 
+            ncols=2,
+            left=0.05,    # Margen izquierdo reducido
+            right=0.97,   # Margen derecho reducido
+            top=0.90,     # Margen superior ajustado para el título (aumentado para más espacio)
+            bottom=0.05,  # Margen inferior aumentado
+            hspace=0.35,  # Espacio horizontal entre filas
+            wspace=0.2    # Espacio vertical entre columnas
+        )
+        
+        # Crear los ejes con la cuadrícula
+        axes = [
+            fig.add_subplot(gs[0, 0]),
+            fig.add_subplot(gs[0, 1]),
+            fig.add_subplot(gs[1, 0]),
+            fig.add_subplot(gs[1, 1])
+        ]
         
         # Mapeo de índices a funciones de gráficos
         chart_functions = {
@@ -347,13 +376,13 @@ class GraphicsService:
         }
         
         # Generar cada gráfico
-        positions = [(0, 0), (0, 1), (1, 0), (1, 1)]
         for idx, chart_idx in enumerate(chart_indices):
             if chart_idx in chart_functions:
-                ax = axes[positions[idx]]
-                chart_functions[chart_idx](df, ax)
+                chart_functions[chart_idx](df, axes[idx])
         
-        plt.tight_layout()
+        # Ajustar diseño para evitar superposiciones
+        # rect: [left, bottom, right, top] en coordenadas de figura normalizadas
+        plt.tight_layout(rect=[0.03, 0.03, 0.97, 0.96])  # Márgenes ajustados
         plt.show()
     
     # Métodos auxiliares para subplots
