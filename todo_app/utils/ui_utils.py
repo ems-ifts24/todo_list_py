@@ -179,7 +179,8 @@ class ConsoleUI:
     @staticmethod
     def format_datetime(dt: datetime) -> str:
         """Formatea un objeto datetime para su visualización."""
-        return dt.strftime("%Y-%m-%d %H:%M:%S") if dt else ""
+        return dt.strftime("%d-%m-%Y %H:%M:%S") if dt else ""
+        # return dt.strftime("%Y-%m-%d %H:%M:%S") if dt else ""
 
 
 class TablePrinter(Generic[T]):
@@ -243,7 +244,7 @@ class TablePrinter(Generic[T]):
                 options.append("A - Página anterior")
             if page < total_pages - 1:
                 options.append("S - Siguiente página")
-            options.append("M - Volver al menú")
+            options.append("C - Continuar")
             
             print("\n" + " | ".join(options))
             
@@ -257,7 +258,7 @@ class TablePrinter(Generic[T]):
                 elif choice == 'S' and page < total_pages - 1:
                     page += 1
                     break
-                elif choice == 'M':
+                elif choice == 'C':
                     return
                 else:
                     ConsoleUI.print_error("Opción inválida. Por favor intente nuevamente.")

@@ -163,7 +163,8 @@ class TodoApp:
                 task.name,
                 priority_display,
                 status_display,
-                task.updated_at.strftime("%Y-%m-%d %H:%M")
+                task.updated_at.strftime("%d-%m-%Y %H:%M")
+                # task.updated_at.strftime("%Y-%m-%d %H:%M")
             ])
         
         # Muestra la tabla con paginación
@@ -327,30 +328,41 @@ class TodoApp:
             self.running = False
     
     def _select_task(self, prompt: str, tasks: List[Task]) -> Optional[Task]:
-        """ Helper metodo para seleccionar una tarea de una lista.
+        """Helper para seleccionar una tarea de una lista.
         
         Args:
-            prompt: The prompt to display to the user
-            tasks: List of tasks to choose from
+            prompt: Mensaje a mostrar al usuario
+            tasks: Lista de tareas entre las que elegir
             
         Returns:
-            The selected task, or None if the user cancels
+            La tarea seleccionada, o None si el usuario cancela
         """
         if not tasks:
             return None
-        
-        # Sort tasks by name for consistent display
-        tasks_sorted = sorted(tasks, key=lambda t: t.name.lower())
-        
-        # Display tasks in a paginated menu
-        from todo_app.utils.pagination import display_paginated_menu
-        
-        return display_paginated_menu(
-            items=tasks_sorted,
-            display_func=lambda t: f"{t.name} (ID: {t.id}, {t.priority.value}, {t.status.value})",
-            title=prompt,
-            allow_cancel=True
-        )
+            
+        while True:
+            ConsoleUI.clear_screen()
+            ConsoleUI.print_header(prompt)
+            
+            # Mostrar tareas en formato de tabla
+            self.list_tasks(tasks, "Seleccione una tarea")
+            
+            # Obtener entrada del usuario
+            task_id = input("\nIngrese el ID de la tarea (o 'm' para volver al menú): ").strip().lower()
+            
+            if task_id == 'm':
+                return None
+                
+            if task_id.isdigit():
+                task_id_int = int(task_id)
+                for task in tasks:
+                    if task.id == task_id_int:
+                        return task
+                print(f"\n❌ No se encontró ninguna tarea con el ID {task_id_int}")
+            else:
+                print("\n❌ Por favor ingrese un ID numérico o 'm' para volver al menú")
+            
+            input("\nPresione Enter para continuar...")
     
     @staticmethod
     def _get_valid_enum_choice(enum_type, field_name: str) -> Any:
@@ -395,6 +407,10 @@ def main():
         from colorama import deinit
         deinit()
 
-
+# esta condición es el punto de entrada del programa. Esto permite ejecutar el archivo como un script y no como un módulo
+# __name__ es una variable que contiene el nombre del módulo actual
+# Si el archivo se ejecuta directamente, __name__ es "__main__"
+# Si el archivo se importa como módulo, __name__ es el nombre del módulo
+# Si esta condición no se pone, el código dentro del if se ejecutará cuando el archivo se importe como módulo
 if __name__ == "__main__":
     main()
