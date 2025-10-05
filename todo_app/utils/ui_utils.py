@@ -132,7 +132,7 @@ class ConsoleUI:
         
         while True:
             response = ConsoleUI.input_with_prompt(prompt, "S" if default else "N").lower()
-            if response in ('s', 'si', 'sí', 'y', 'yes'):
+            if response in ('s', 'si'):
                 return True
             elif response in ('n', 'no'):
                 return False
@@ -163,7 +163,7 @@ class ConsoleUI:
             for i, item in enumerate(items, 1):
                 print(f"{i}. {display_func(item)}")
             
-            choice = ConsoleUI.input_with_prompt("Ingrese el número o 'q' para cancelar")
+            choice = ConsoleUI.input_with_prompt("Ingrese el número o 'Q' para cancelar")
             
             if choice.lower() == 'q':
                 return None

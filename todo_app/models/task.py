@@ -34,7 +34,7 @@ class Status(Enum):
         try:
             return list(cls)[value - 1]
         except IndexError:
-            raise ValueError(f"Invalid status value: {value}. Must be between 1 and {len(cls)}.")
+            raise ValueError(f"Valor de estado inválido: {value}. Debe estar entre 1 y {len(cls)}.")
 
     @classmethod
     def get_choices(cls) -> str:
@@ -64,9 +64,9 @@ class Task:
         priority: Optional[Priority] = None,
         status: Optional[Status] = None
     ) -> None:
-        """Update task fields and validate state transitions."""
+        """Actualiza los campos de la tarea y valida las transiciones de estado."""
         if self.status == Status.COMPLETED:
-            raise ValueError("Cannot modify a completed task")
+            raise ValueError("No se puede modificar una tarea completada")
 
         if name is not None:
             self.name = name
@@ -79,9 +79,9 @@ class Task:
         self.updated_at = datetime.now()
 
     def _validate_status_transition(self, new_status: Status) -> None:
-        """Validate if the status transition is allowed."""
+        """Valida si la transición de estado es permitida."""
         if self.status == Status.COMPLETED:
-            raise ValueError("Cannot change status of a completed task")
+            raise ValueError("No se puede modificar una tarea completada")
 
         valid_transitions = {
             Status.PENDING: [Status.IN_PROGRESS, Status.COMPLETED],
@@ -90,11 +90,11 @@ class Task:
 
         if new_status not in valid_transitions.get(self.status, []):
             raise ValueError(
-                f"Invalid status transition from {self.status.value} to {new_status.value}"
+                f"Transición de estado inválida: {self.status.value} a {new_status.value}"
             )
 
     def to_dict(self) -> Dict[str, Any]:
-        """Convert task to dictionary for JSON serialization."""
+        """Convierte la tarea a un diccionario para la serialización JSON."""
         return {
             "id": self.id,
             "name": self.name,
@@ -106,7 +106,7 @@ class Task:
 
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> 'Task':
-        """Create a Task instance from a dictionary."""
+        """Crea una instancia de Task a partir de un diccionario."""
         return cls(
             task_id=data["id"],
             name=data["name"],

@@ -393,7 +393,7 @@ class TodoApp:
 
 
 def main():
-    """Entry point for the application."""
+    """Punto de entrada de la aplicación."""
     try:
         app = TodoApp()
         app.run()

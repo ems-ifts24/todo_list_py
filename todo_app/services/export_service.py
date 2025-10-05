@@ -87,19 +87,18 @@ class ExportService:
             
         Returns:
             True si la exportación fue exitosa, False de lo contrario
-            True if export was successful, False otherwise
         """
         if not tasks:
-            ConsoleUI.print_warning("No tasks to export.")
+            ConsoleUI.print_warning("No hay tareas para exportar.")
             return False
             
-        ConsoleUI.print_highlight(f"\nPreparing to export {len(tasks)} tasks to CSV...")
+        ConsoleUI.print_highlight(f"\nPreparando para exportar {len(tasks)} tareas a CSV...")
         
         try:
             filepath = self.export_to_csv(tasks)
-            ConsoleUI.print_success(f"Successfully exported {len(tasks)} tasks to:\n{filepath}")
+            ConsoleUI.print_success(f"Exportadas {len(tasks)} tareas a:\n{filepath}")
             return True
             
         except Exception as e:
-            ConsoleUI.print_error(f"Failed to export tasks: {str(e)}")
+            ConsoleUI.print_error(f"Error al exportar tareas: {str(e)}")
             return False
