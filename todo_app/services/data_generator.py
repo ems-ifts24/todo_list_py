@@ -167,7 +167,7 @@ class DataGenerator:
         """
         # Nombre del archivo simulado con timestamp
         timestamp = datetime.now().strftime("%Y%m%d")
-        simulated_file = self.data_dir / f"todo_list_simulador_{timestamp}.json"
+        simulated_file = self.data_dir / f"tareas_simuladas_{timestamp}.json"
         
         # Cargar tareas existentes
         all_tasks, used_names, next_id = self._load_existing_tasks(simulated_file)
@@ -224,7 +224,7 @@ class DataGenerator:
         Returns:
             Ruta del archivo simulado más reciente, o None si no existe
         """
-        simulated_files = list(self.data_dir.glob("todo_list_simulador_*.json"))
+        simulated_files = list(self.data_dir.glob("tareas_simuladas_*.json"))
         
         if not simulated_files:
             return None

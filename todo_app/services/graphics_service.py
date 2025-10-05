@@ -142,7 +142,15 @@ class GraphicsService:
         plt.figure(figsize=(12, 6))
         
         # Histograma por semana
-        df['created_at'].hist(bins=30, color='#3498db', alpha=0.7, edgecolor='black')
+        n, bins, patches = plt.hist(df['created_at'], bins=30, color='#3498db', alpha=0.7, edgecolor='black')
+        
+        # Agregar valores sobre las barras (solo si hay espacio)
+        for i, (count, patch) in enumerate(zip(n, patches)):
+            if count > 0:  # Solo mostrar si hay datos
+                height = patch.get_height()
+                plt.text(patch.get_x() + patch.get_width()/2., height,
+                        f'{int(count)}',
+                        ha='center', va='bottom', fontsize=8, fontweight='bold')
         
         plt.title('Distribución Temporal de Creación de Tareas', fontsize=14, fontweight='bold', pad=20)
         plt.xlabel('Fecha de Creación', fontsize=12, fontweight='bold')
@@ -195,11 +203,16 @@ class GraphicsService:
         plt.figure(figsize=(10, 8))
         colors = [self.PRIORITY_COLORS[p] for p in priority_counts.index]
         
+        # Función personalizada para mostrar porcentaje y cantidad
+        def autopct_format(pct, allvals):
+            absolute = int(round(pct/100.*sum(allvals)))
+            return f'{pct:.1f}%\n({absolute})'
+        
         wedges, texts, autotexts = plt.pie(
             priority_counts.values,
             labels=priority_counts.index,
             colors=colors,
-            autopct='%1.1f%%',
+            autopct=lambda pct: autopct_format(pct, priority_counts.values),
             startangle=90,
             explode=[0.05] * len(priority_counts),
             shadow=True
@@ -235,11 +248,16 @@ class GraphicsService:
         plt.figure(figsize=(10, 8))
         colors = [self.STATUS_COLORS[s] for s in status_counts.index]
         
+        # Función personalizada para mostrar porcentaje y cantidad
+        def autopct_format(pct, allvals):
+            absolute = int(round(pct/100.*sum(allvals)))
+            return f'{pct:.1f}%\n({absolute})'
+        
         wedges, texts, autotexts = plt.pie(
             status_counts.values,
             labels=status_counts.index,
             colors=colors,
-            autopct='%1.1f%%',
+            autopct=lambda pct: autopct_format(pct, status_counts.values),
             startangle=90,
             explode=[0.05] * len(status_counts),
             shadow=True
@@ -380,7 +398,17 @@ class GraphicsService:
     
     def _subplot_temporal_distribution(self, df: pd.DataFrame, ax) -> None:
         """Genera subplot de distribución temporal."""
-        ax.hist(df['created_at'], bins=20, color='#3498db', alpha=0.7, edgecolor='black')
+        n, bins, patches = ax.hist(df['created_at'], bins=20, color='#3498db', alpha=0.7, edgecolor='black')
+        
+        # Agregar valores sobre las barras (solo las más altas para no saturar)
+        max_height = max(n)
+        for i, (count, patch) in enumerate(zip(n, patches)):
+            if count > max_height * 0.3:  # Solo mostrar si es significativo
+                height = patch.get_height()
+                ax.text(patch.get_x() + patch.get_width()/2., height,
+                       f'{int(count)}',
+                       ha='center', va='bottom', fontsize=7, fontweight='bold')
+        
         ax.set_title('Distribución Temporal', fontweight='bold')
         ax.set_xlabel('Fecha de Creación', fontweight='bold')
         ax.set_ylabel('Cantidad', fontweight='bold')
@@ -406,17 +434,23 @@ class GraphicsService:
         priority_counts = df['priority'].value_counts()
         colors = [self.PRIORITY_COLORS[p] for p in priority_counts.index]
         
+        # Función personalizada para mostrar porcentaje y cantidad
+        def autopct_format(pct, allvals):
+            absolute = int(round(pct/100.*sum(allvals)))
+            return f'{pct:.1f}%\n({absolute})'
+        
         wedges, texts, autotexts = ax.pie(
             priority_counts.values,
             labels=priority_counts.index,
             colors=colors,
-            autopct='%1.1f%%',
+            autopct=lambda pct: autopct_format(pct, priority_counts.values),
             startangle=90
         )
         
         for autotext in autotexts:
             autotext.set_color('white')
             autotext.set_fontweight('bold')
+            autotext.set_fontsize(9)
         
         ax.set_title('Proporción por Prioridad', fontweight='bold')
     
@@ -425,17 +459,23 @@ class GraphicsService:
         status_counts = df['status'].value_counts()
         colors = [self.STATUS_COLORS[s] for s in status_counts.index]
         
+        # Función personalizada para mostrar porcentaje y cantidad
+        def autopct_format(pct, allvals):
+            absolute = int(round(pct/100.*sum(allvals)))
+            return f'{pct:.1f}%\n({absolute})'
+        
         wedges, texts, autotexts = ax.pie(
             status_counts.values,
             labels=status_counts.index,
             colors=colors,
-            autopct='%1.1f%%',
+            autopct=lambda pct: autopct_format(pct, status_counts.values),
             startangle=90
         )
         
         for autotext in autotexts:
             autotext.set_color('white')
             autotext.set_fontweight('bold')
+            autotext.set_fontsize(9)
         
         ax.set_title('Proporción por Estado', fontweight='bold')
     

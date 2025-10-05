@@ -72,8 +72,8 @@ class Task:
             "name": self.name,
             "priority": self.priority.value,
             "status": self.status.value,
-            "created_at": self.created_at.isoformat(),
-            "updated_at": self.updated_at.isoformat()
+            "created_at": self.created_at.strftime("%Y-%m-%dT%H:%M:%S"),
+            "updated_at": self.updated_at.strftime("%Y-%m-%dT%H:%M:%S")
         }
 
     # Decorador @classmethod se utiliza para definir un método de clase.
@@ -83,13 +83,22 @@ class Task:
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> 'Task':
         """Crea una instancia de Task a partir de un diccionario."""
+        # Parsear fechas - compatible con ambos formatos (con y sin microsegundos)
+        def parse_datetime(date_str: str) -> datetime:
+            try:
+                # Intentar parsear con el formato estándar ISO
+                return datetime.fromisoformat(date_str)
+            except ValueError:
+                # Si falla, intentar sin microsegundos
+                return datetime.strptime(date_str, "%Y-%m-%dT%H:%M:%S")
+        
         return cls(
             task_id=data["id"],
             name=data["name"],
             priority=Priority(data["priority"]),
             status=Status(data["status"]),
-            created_at=datetime.fromisoformat(data["created_at"]),
-            updated_at=datetime.fromisoformat(data["updated_at"])
+            created_at=parse_datetime(data["created_at"]),
+            updated_at=parse_datetime(data["updated_at"])
         )
 
     def __str__(self) -> str:

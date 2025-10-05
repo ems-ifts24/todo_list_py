@@ -2,6 +2,8 @@
 Módulo de simulación de tareas.
 Coordina la generación de datos simulados y la visualización de gráficos.
 """
+import json
+from pathlib import Path
 from typing import Optional
 from colorama import Style
 
@@ -57,6 +59,10 @@ class Simulator:
         # Mostrar estado del archivo simulado
         if self.current_simulated_file:
             ConsoleUI.print_success(f"Archivo simulado activo: {self.current_simulated_file}")
+            
+            # Mostrar conteo de registros reales y simulados
+            real_count, simulated_count = self._count_real_and_simulated_tasks()
+            print(f"{TextColor.INFO.value}Reg. reales = {real_count}  |  Registros simulados = {simulated_count}{Style.RESET_ALL}")
         else:
             ConsoleUI.print_warning("No hay archivo simulado. Genere uno primero (opción 1).")
         
@@ -65,6 +71,38 @@ class Simulator:
         # Mostrar opciones del menú
         for key, (label, _) in self.menu_options.items():
             print(f"{TextColor.INFO.value}{key}.{Style.RESET_ALL} {label}")
+    
+    def _count_real_and_simulated_tasks(self) -> tuple[int, int]:
+        """Cuenta los registros reales y simulados.
+        
+        Returns:
+            Tupla con (cantidad de registros reales, cantidad de registros simulados)
+        """
+        real_count = 0
+        simulated_count = 0
+        
+        # Contar registros reales
+        real_file = Path("data") / "tareas.json"
+        if real_file.exists():
+            try:
+                with open(real_file, 'r', encoding='utf-8') as f:
+                    real_tasks = json.load(f)
+                    real_count = len(real_tasks)
+            except (json.JSONDecodeError, FileNotFoundError):
+                real_count = 0
+        
+        # Contar registros en el archivo simulado
+        if self.current_simulated_file:
+            try:
+                with open(self.current_simulated_file, 'r', encoding='utf-8') as f:
+                    all_tasks = json.load(f)
+                    total_count = len(all_tasks)
+                    # Los simulados son el total menos los reales
+                    simulated_count = total_count - real_count
+            except (json.JSONDecodeError, FileNotFoundError):
+                simulated_count = 0
+        
+        return real_count, simulated_count
     
     def _handle_menu_selection(self) -> None:
         """Maneja la selección del usuario."""
@@ -89,6 +127,10 @@ class Simulator:
                 "100"
             )
             
+            # Si no ingresa nada, usar el valor por defecto
+            if not count_input.strip():
+                count_input = "100"
+            
             try:
                 count = int(count_input)
                 if count <= 0:
@@ -105,11 +147,11 @@ class Simulator:
         
         # Generar datos
         try:
-            ConsoleUI.print_info(f"\nGenerando {count} registros simulados...")
+            ConsoleUI.print_info(f"Generando {count} registros simulados...")
             file_path = self.data_generator.generate_simulated_tasks(count)
             self.current_simulated_file = file_path
             
-            ConsoleUI.print_success(f"\n✅ Se generaron {count} registros exitosamente.")
+            ConsoleUI.print_success(f"✅ Se generaron {count} registros exitosamente.")
             ConsoleUI.print_info(f"Archivo guardado en: {file_path}")
             
         except Exception as e:
