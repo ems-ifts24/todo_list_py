@@ -27,6 +27,7 @@ from todo_app.models.task import Task, Priority, Status  # Para poder usar los m
 from todo_app.services.task_service import TaskService  # Para usar los métodos de la clase TaskService
 from todo_app.services.export_service import ExportService  # Para exportar datos a CSV
 from todo_app.utils.ui_utils import ConsoleUI, TablePrinter, TextColor  # Permite mostrar mensajes en consola con colores y estilos
+from todo_app.simulator import Simulator  # Para acceder al módulo de simulación
 
 
 class TodoApp:
@@ -46,7 +47,8 @@ class TodoApp:
             "4": ("✏️  Actualizar tarea", self.update_task),
             "5": ("🗑️  Eliminar tarea", self.delete_task),
             "6": ("💾 Exportar datos a CSV", self.export_tasks),
-            "7": ("❌ Salir", self.exit_app)
+            "7": ("🎲 Simulación", self.open_simulator),
+            "8": ("❌ Salir", self.exit_app)
         }
     
     def run(self) -> None:
@@ -320,6 +322,15 @@ class TodoApp:
             self.export_service.export_tasks_interactive(filtered_tasks)
         
         input("\nPresione Enter para continuar...")
+    
+    def open_simulator(self) -> None:
+        """Abre el módulo de simulación."""
+        try:
+            simulator = Simulator()
+            simulator.run()
+        except Exception as e:
+            ConsoleUI.print_error(f"Error al ejecutar el simulador: {str(e)}")
+            input("\nPresione Enter para continuar...")
     
     def exit_app(self) -> None:
         """Cierra la aplicación."""
