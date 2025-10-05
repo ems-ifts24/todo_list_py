@@ -364,6 +364,9 @@ class TodoApp:
             
             input("\nPresione Enter para continuar...")
     
+    # Decorador @staticmethod se utiliza para definir un método estático.
+    # Los métodos estáticos se llaman en la clase en lugar de en una instancia de la clase.
+    # No requieren una instancia de la clase y no pueden acceder a atributos de instancia.
     @staticmethod
     def _get_valid_enum_choice(enum_type, field_name: str) -> Any:
         """Obtiene un valor válido de enum del usuario.

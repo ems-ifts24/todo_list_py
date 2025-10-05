@@ -46,6 +46,9 @@ class TableStyle(Enum):
 class ConsoleUI:
     """Clase de utilidad para elementos y formato de la interfaz de consola."""
     
+    # Decorador @staticmethod se utiliza para definir un método estático.
+    # Los métodos estáticos se llaman en la clase en lugar de en una instancia de la clase.
+    # No requieren una instancia de la clase y no pueden acceder a atributos de instancia.
     @staticmethod
     def clear_screen() -> None:
         """Limpia la pantalla de la consola."""
@@ -138,51 +141,7 @@ class ConsoleUI:
                 return False
             print("Por favor, ingrese 's' para sí o 'n' para no.")
     
-    @staticmethod
-    def select_from_list(
-        items: List[Any], 
-        display_func: callable = str,
-        prompt: str = "Seleccione una opción"
-    ) -> Any:
-        """Muestra una lista numerada y permite al usuario seleccionar un elemento.
         
-        Args:
-            items: Lista de elementos para seleccionar
-            display_func: Función para convertir un elemento en una cadena de visualización
-            prompt: Mensaje a mostrar al usuario
-            
-        Returns:
-            El elemento seleccionado, o None si se cancela
-        """
-        if not items:
-            ConsoleUI.print_warning("No hay elementos para seleccionar.")
-            return None
-            
-        while True:
-            ConsoleUI.print_highlight(f"\n{prompt}:")
-            for i, item in enumerate(items, 1):
-                print(f"{i}. {display_func(item)}")
-            
-            choice = ConsoleUI.input_with_prompt("Ingrese el número o 'Q' para cancelar")
-            
-            if choice.lower() == 'q':
-                return None
-                
-            try:
-                index = int(choice) - 1
-                if 0 <= index < len(items):
-                    return items[index]
-                ConsoleUI.print_error(f"Por favor ingrese un número entre 1 y {len(items)}")
-            except ValueError:
-                ConsoleUI.print_error("Entrada inválida. Por favor ingrese un número.")
-    
-    @staticmethod
-    def format_datetime(dt: datetime) -> str:
-        """Formatea un objeto datetime para su visualización."""
-        return dt.strftime("%d-%m-%Y %H:%M:%S") if dt else ""
-        # return dt.strftime("%Y-%m-%d %H:%M:%S") if dt else ""
-
-
 class TablePrinter(Generic[T]):
     """Clase auxiliar para mostrar datos tabulares con paginación."""
     

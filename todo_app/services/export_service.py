@@ -10,6 +10,8 @@ from ..utils.ui_utils import ConsoleUI
 class ExportService:
     """Servicio para exportar tareas a diferentes formatos."""
     
+    # Método mágico __init__ se utiliza para inicializar una nueva instancia de la clase.
+    # Se llama automáticamente cuando se crea un objeto de la clase usando el constructor.
     def __init__(self, export_dir: str = "exports"):
         """Inicializa el servicio de exportación.
         

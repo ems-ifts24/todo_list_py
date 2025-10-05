@@ -6,6 +6,8 @@ from ..models.task import Task, Priority, Status
 
 
 class TaskService:
+    # Método mágico __init__ se utiliza para inicializar una nueva instancia de la clase.
+    # Se llama automáticamente cuando se crea un objeto de la clase usando el constructor.
     def __init__(self, data_dir: str = "data", data_file: str = "tareas.json"):
         """Inicializa el servicio de tareas con el directorio y archivo de datos.
         

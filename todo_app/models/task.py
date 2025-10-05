@@ -8,38 +8,10 @@ class Priority(Enum):
     MEDIUM = "MEDIA"
     LOW = "BAJA"
 
-    # Decorador @classmethod se utiliza para definir un método de clase.
-    # Los métodos de clase se llaman en la clase en lugar de en una instancia de la clase.
-    # Son útiles para definir métodos que operan en la clase en lugar de en una instancia de la clase,
-    # por ejemplo, para obtener una lista de todos los valores de la enumeración.
-    @classmethod
-    def from_int(cls, value: int) -> 'Priority':
-        try:
-            return list(cls)[value - 1]
-        except IndexError:
-            raise ValueError(f"Valor inválido para prioridad: {value}. Debe estar entre 1 y {len(cls)}.")
-
-    @classmethod
-    def get_choices(cls) -> str:
-        return "\n".join(f"{i+1}. {priority.value}" for i, priority in enumerate(cls))
-
-
 class Status(Enum):
     PENDING = "PENDIENTE"
     IN_PROGRESS = "EN CURSO"
     COMPLETED = "FINALIZADA"
-
-    @classmethod
-    def from_int(cls, value: int) -> 'Status':
-        try:
-            return list(cls)[value - 1]
-        except IndexError:
-            raise ValueError(f"Valor de estado inválido: {value}. Debe estar entre 1 y {len(cls)}.")
-
-    @classmethod
-    def get_choices(cls) -> str:
-        return "\n".join(f"{i+1}. {status.value}" for i, status in enumerate(cls))
-
 
 class Task:
     def __init__(
@@ -104,6 +76,10 @@ class Task:
             "updated_at": self.updated_at.isoformat()
         }
 
+    # Decorador @classmethod se utiliza para definir un método de clase.
+    # Los métodos de clase se llaman en la clase en lugar de en una instancia de la clase.
+    # Son útiles para definir métodos que operan en la clase en lugar de en una instancia de la clase,
+    # por ejemplo, para obtener una lista de todos los valores de la enumeración.
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> 'Task':
         """Crea una instancia de Task a partir de un diccionario."""
@@ -117,9 +93,13 @@ class Task:
         )
 
     def __str__(self) -> str:
+        # Método mágico __str__ se utiliza para definir cómo se representa una instancia como cadena de texto.
+        # Se llama automáticamente cuando se usa str(objeto) o cuando se imprime el objeto.
         return f"{self.name} (id:{self.id})"
 
     def __eq__(self, other: object) -> bool:
+        # Método mágico __eq__ se utiliza para definir el comportamiento del operador de igualdad (==).
+        # Se llama automáticamente cuando se compara un objeto con otro usando el operador ==.
         if not isinstance(other, Task):
             return False
         return self.id == other.id
