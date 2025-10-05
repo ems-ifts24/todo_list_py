@@ -348,7 +348,7 @@ class TodoApp:
             self.list_tasks(tasks, "Seleccione una tarea")
             
             # Obtener entrada del usuario
-            task_id = input("\nIngrese el ID de la tarea (o 'm' para volver al menú): ").strip().lower()
+            task_id = input("\nIngrese el ID de la tarea (o 'M' para volver al menú): ").strip().lower()
             
             if task_id == 'm':
                 return None
@@ -360,7 +360,7 @@ class TodoApp:
                         return task
                 print(f"\n❌ No se encontró ninguna tarea con el ID {task_id_int}")
             else:
-                print("\n❌ Por favor ingrese un ID numérico o 'm' para volver al menú")
+                print("\n❌ Por favor ingrese un ID numérico o 'M' para volver al menú")
             
             input("\nPresione Enter para continuar...")
     

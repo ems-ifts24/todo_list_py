@@ -191,7 +191,7 @@ class TablePrinter(Generic[T]):
         headers: List[str],
         data: List[T],
         rows_per_page: int = 10,
-        style: TableStyle = TableStyle.GRID
+        style: TableStyle = TableStyle.FANCY_GRID
     ):
         """Inicializa el generador de tablas.
         
