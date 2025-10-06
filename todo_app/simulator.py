@@ -123,16 +123,16 @@ class Simulator:
         # Solicitar cantidad de registros
         while True:
             count_input = ConsoleUI.input_with_prompt(
-                "Cantidad de registros a generar",
+                "Cantidad de registros a generar (default: 100)",
                 "100"
             )
             
-            # Si no ingresa nada, usar el valor por defecto
-            if not count_input.strip():
+            # Si no ingresa nada o solo espacios, usar el valor por defecto
+            if not count_input or not count_input.strip():
                 count_input = "100"
             
             try:
-                count = int(count_input)
+                count = int(count_input.strip())
                 if count <= 0:
                     ConsoleUI.print_error("La cantidad debe ser mayor a 0.")
                     continue

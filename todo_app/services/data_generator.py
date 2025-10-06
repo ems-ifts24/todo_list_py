@@ -151,10 +151,16 @@ class DataGenerator:
             Fecha aleatoria dentro del rango
         """
         time_delta = end_date - start_date
-        random_days = random.randint(0, time_delta.days)
-        random_seconds = random.randint(0, 86400)  # Segundos en un día
+        total_seconds = int(time_delta.total_seconds())
         
-        return start_date + timedelta(days=random_days, seconds=random_seconds)
+        # Si no hay diferencia de tiempo, retornar la fecha de inicio
+        if total_seconds <= 0:
+            return start_date
+        
+        # Generar un número aleatorio de segundos dentro del rango total
+        random_seconds = random.randint(0, total_seconds)
+        
+        return start_date + timedelta(seconds=random_seconds)
     
     def generate_simulated_tasks(self, count: int = 100) -> str:
         """Genera N tareas simuladas y las guarda en un archivo.

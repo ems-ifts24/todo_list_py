@@ -26,6 +26,7 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')
 from todo_app.models.task import Task, Priority, Status  # Para poder usar los métodos en cada una de las clase
 from todo_app.services.task_service import TaskService  # Para usar los métodos de la clase TaskService
 from todo_app.services.export_service import ExportService  # Para exportar datos a CSV
+from todo_app.services.graphics_service import GraphicsService  # Para generar gráficos
 from todo_app.utils.ui_utils import ConsoleUI, TablePrinter, TextColor  # Permite mostrar mensajes en consola con colores y estilos
 from todo_app.simulator import Simulator  # Para acceder al módulo de simulación
 
@@ -37,6 +38,7 @@ class TodoApp:
         """Inicializa la aplicación."""
         self.task_service = TaskService()
         self.export_service = ExportService()
+        self.graphics_service = GraphicsService()
         self.running = True
         
         # Menu options mapping
@@ -47,7 +49,8 @@ class TodoApp:
             "4": ("✏️  Actualizar tarea", self.update_task),
             "5": ("🗑️  Eliminar tarea", self.delete_task),
             "6": ("💾 Exportar datos a CSV", self.export_tasks),
-            "7": ("🎲 Simulación", self.open_simulator),
+            "7": ("📊 Ver gráficos", self.show_graphics),
+            "8": ("🎲 Simulación", self.open_simulator),
             "0": ("❌ Salir", self.exit_app)
         }
     
@@ -99,20 +102,19 @@ class TodoApp:
         ConsoleUI.print_header("➕ CREAR NUEVA TAREA")
         
         try:
-            # Get task name
+            # Obtener nombre de la tarea
             while True:
                 name = ConsoleUI.input_with_prompt("Nombre de la tarea")
                 if name.strip():
                     break
                 ConsoleUI.print_warning("El nombre de la tarea no puede estar vacío.")
             
-            # Get priority
+            # Mostrar y obtener prioridad
             ConsoleUI.print_highlight("\nSeleccione la prioridad:")
-            for i, priority in enumerate(Priority, 1):
-                print(f"{i}. {priority.value}")
-            
             priority = self._get_valid_enum_choice(Priority, "prioridad")
             if priority is None:
+                ConsoleUI.print_warning("\nOperación cancelada.")
+                input("\nPresione Enter para continuar...")
                 return
             
             # Crea la tarea
@@ -323,6 +325,117 @@ class TodoApp:
         
         input("\nPresione Enter para continuar...")
     
+    def show_graphics(self) -> None:
+        """Muestra gráficos de las tareas reales."""
+        ConsoleUI.clear_screen()
+        ConsoleUI.print_header("📊 GRÁFICOS DE TAREAS")
+        
+        # Obtener todas las tareas
+        tasks = self.task_service.get_all_tasks()
+        if not tasks:
+            ConsoleUI.print_info("No hay tareas para graficar.")
+            input("\nPresione Enter para continuar...")
+            return
+        
+        # Convertir tareas a formato JSON temporal para GraphicsService
+        import json
+        import tempfile
+        from pathlib import Path
+        
+        tasks_data = [task.to_dict() for task in tasks]
+        
+        # Crear archivo temporal
+        temp_file = Path(tempfile.gettempdir()) / "tareas_temp.json"
+        with open(temp_file, 'w', encoding='utf-8') as f:
+            json.dump(tasks_data, f, ensure_ascii=False, indent=2)
+        
+        # Menú de gráficos
+        graphics_options = {
+            "1": ("📈 Gráfico: Tareas por Prioridad", lambda: self.graphics_service.plot_tasks_by_priority(str(temp_file))),
+            "2": ("📊 Gráfico: Tareas por Estado", lambda: self.graphics_service.plot_tasks_by_status(str(temp_file))),
+            "3": ("📉 Gráfico: Distribución Temporal", lambda: self.graphics_service.plot_temporal_distribution(str(temp_file))),
+            "4": ("🔥 Gráfico: Prioridad vs Estado (heatmap)", lambda: self.graphics_service.plot_priority_vs_status_heatmap(str(temp_file))),
+            "5": ("🥧 Gráfico: Proporción por Prioridad (pie)", lambda: self.graphics_service.plot_priority_pie_chart(str(temp_file))),
+            "6": ("🥧 Gráfico: Proporción por Estado (pie)", lambda: self.graphics_service.plot_status_pie_chart(str(temp_file))),
+            "7": ("📈 Gráfico: Tendencia de Estados (stackplot)", lambda: self.graphics_service.plot_status_trend_over_time(str(temp_file))),
+            "8": ("🎯 Mostrar 4 gráficos juntos", lambda: self._show_multiple_graphics(str(temp_file))),
+            "0": ("🔙 Volver al menú principal", None)
+        }
+        
+        while True:
+            ConsoleUI.clear_screen()
+            ConsoleUI.print_header("📊 GRÁFICOS DE TAREAS")
+            ConsoleUI.print_info(f"Total de tareas: {len(tasks)}")
+            print()
+            
+            for key, (label, _) in graphics_options.items():
+                print(f"{TextColor.INFO.value}{key}.{Style.RESET_ALL} {label}")
+            
+            choice = input("\nSeleccione una opción: ").strip()
+            
+            if choice == "0":
+                break
+            elif choice in graphics_options and choice != "0":
+                _, action = graphics_options[choice]
+                try:
+                    ConsoleUI.print_info("Generando gráfico...")
+                    action()
+                except Exception as e:
+                    ConsoleUI.print_error(f"Error al generar gráfico: {str(e)}")
+                    input("\nPresione Enter para continuar...")
+            else:
+                ConsoleUI.print_error("Opción inválida. Por favor, intente de nuevo.")
+                input("\nPresione Enter para continuar...")
+    
+    def _show_multiple_graphics(self, file_path: str) -> None:
+        """Muestra 4 gráficos juntos.
+        
+        Args:
+            file_path: Ruta del archivo JSON con las tareas
+        """
+        ConsoleUI.clear_screen()
+        ConsoleUI.print_header("🎯 MOSTRAR 4 GRÁFICOS JUNTOS")
+        
+        # Mostrar opciones de gráficos disponibles
+        chart_options = {
+            1: "Tareas por Prioridad",
+            2: "Tareas por Estado",
+            3: "Distribución Temporal",
+            4: "Prioridad vs Estado (heatmap)",
+            5: "Proporción por Prioridad (pie)",
+            6: "Proporción por Estado (pie)",
+            7: "Tendencia de Estados (stackplot)"
+        }
+        
+        ConsoleUI.print_highlight("\nGráficos disponibles:")
+        for idx, name in chart_options.items():
+            print(f"{idx}. {name}")
+        
+        # Solicitar selección de 4 gráficos
+        selected_charts = []
+        for i in range(4):
+            while True:
+                choice = input(f"\nSeleccione el gráfico #{i+1} (1-7): ").strip()
+                
+                try:
+                    chart_idx = int(choice)
+                    if 1 <= chart_idx <= 7:
+                        selected_charts.append(chart_idx)
+                        ConsoleUI.print_success(f"✓ Gráfico seleccionado: {chart_options[chart_idx]}")
+                        break
+                    else:
+                        ConsoleUI.print_error("Ingrese un número entre 1 y 7.")
+                except ValueError:
+                    ConsoleUI.print_error("Ingrese un número válido.")
+        
+        # Generar gráficos
+        try:
+            ConsoleUI.print_info("\nGenerando dashboard con 4 gráficos...")
+            self.graphics_service.plot_multiple_charts(file_path, selected_charts)
+        except Exception as e:
+            ConsoleUI.print_error(f"Error al generar gráficos: {str(e)}")
+            input("\nPresione Enter para continuar...")
+    
     def open_simulator(self) -> None:
         """Abre el módulo de simulación."""
         try:
@@ -387,18 +500,38 @@ class TodoApp:
             field_name: Nombre del campo (para mensajes de error)
             
         Returns:
-            The selected enum value, or None if the user cancels
+            El valor de enum seleccionado, o None si el usuario cancela
+            
+        Raises:
+            KeyboardInterrupt: Si el usuario presiona Ctrl+C para cancelar
         """
         while True:
-            choice = input(f"\nSeleccione {field_name} (1-{len(enum_type)}): ").strip()
-            
-            if not choice:
+            try:
+                # Mostrar opciones sin el índice
+                for i, priority in enumerate(enum_type, 1):
+                    print(f"{i}. {priority.value}")
+                print("0. Cancelar")
+                
+                choice = input(f"\nSeleccione {field_name} (1-{len(enum_type)} o 0 para cancelar): ").strip()
+                
+                if not choice:
+                    ConsoleUI.print_warning(f"Debe ingresar una opción.")
+                    continue
+                    
+                if choice == "0":
+                    return None
+                    
+                if choice.isdigit() and 1 <= int(choice) <= len(enum_type):
+                    return list(enum_type)[int(choice) - 1]
+                    
+                ConsoleUI.print_error(f"Por favor ingrese un número entre 1 y {len(enum_type)} o 0 para cancelar.")
+                
+            except KeyboardInterrupt:
+                # Si el usuario presiona Ctrl+C, salir del bucle
                 return None
-                
-            if choice.isdigit() and 1 <= int(choice) <= len(enum_type):
-                return list(enum_type)[int(choice) - 1]
-                
-            ConsoleUI.print_error(f"Por favor ingrese un número entre 1 y {len(enum_type)}.")
+            except Exception as e:
+                ConsoleUI.print_error(f"Error inesperado: {str(e)}")
+                continue
     
     def _handle_shutdown(self) -> None:
         """Maneja el cierre de la aplicación."""

@@ -9,6 +9,7 @@ from datetime import datetime
 
 import pandas as pd
 import matplotlib.pyplot as plt
+import matplotlib.dates as mdates
 import seaborn as sns
 
 
@@ -139,23 +140,26 @@ class GraphicsService:
         df = self._load_tasks_from_file(file_path)
         
         # Crear gráfico
-        plt.figure(figsize=(12, 6))
+        fig, ax = plt.subplots(figsize=(12, 6))
         
         # Histograma por semana
-        n, bins, patches = plt.hist(df['created_at'], bins=30, color='#3498db', alpha=0.7, edgecolor='black')
+        n, bins, patches = ax.hist(df['created_at'], bins=30, color='#3498db', alpha=0.7, edgecolor='black')
         
         # Agregar valores sobre las barras (solo si hay espacio)
         for i, (count, patch) in enumerate(zip(n, patches)):
             if count > 0:  # Solo mostrar si hay datos
                 height = patch.get_height()
-                plt.text(patch.get_x() + patch.get_width()/2., height,
+                ax.text(patch.get_x() + patch.get_width()/2., height,
                         f'{int(count)}',
                         ha='center', va='bottom', fontsize=8, fontweight='bold')
         
-        plt.title('Distribución Temporal de Creación de Tareas', fontsize=14, fontweight='bold', pad=20)
-        plt.xlabel('Fecha de Creación', fontsize=12, fontweight='bold')
-        plt.ylabel('Cantidad de Tareas', fontsize=12, fontweight='bold')
-        plt.grid(axis='y', alpha=0.3)
+        # Formatear fechas en el eje X como DD-MM-YYYY
+        ax.xaxis.set_major_formatter(mdates.DateFormatter('%d-%m-%Y'))
+        
+        ax.set_title('Distribución Temporal de Creación de Tareas', fontsize=14, fontweight='bold', pad=20)
+        ax.set_xlabel('Fecha de Creación', fontsize=12, fontweight='bold')
+        ax.set_ylabel('Cantidad de Tareas', fontsize=12, fontweight='bold')
+        ax.grid(axis='y', alpha=0.3)
         plt.xticks(rotation=45)
         plt.tight_layout()
         plt.show()
@@ -380,9 +384,6 @@ class GraphicsService:
             if chart_idx in chart_functions:
                 chart_functions[chart_idx](df, axes[idx])
         
-        # Ajustar diseño para evitar superposiciones
-        # rect: [left, bottom, right, top] en coordenadas de figura normalizadas
-        plt.tight_layout(rect=[0.03, 0.03, 0.97, 0.96])  # Márgenes ajustados
         plt.show()
     
     # Métodos auxiliares para subplots
@@ -437,6 +438,9 @@ class GraphicsService:
                 ax.text(patch.get_x() + patch.get_width()/2., height,
                        f'{int(count)}',
                        ha='center', va='bottom', fontsize=7, fontweight='bold')
+        
+        # Formatear fechas en el eje X como DD-MM-YYYY
+        ax.xaxis.set_major_formatter(mdates.DateFormatter('%d-%m-%Y'))
         
         ax.set_title('Distribución Temporal', fontweight='bold')
         ax.set_xlabel('Fecha de Creación', fontweight='bold')

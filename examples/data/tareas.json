@@ -4,135 +4,175 @@
     "name": "Pagar VISA",
     "priority": "ALTA",
     "status": "PENDIENTE",
-    "created_at": "2025-09-02T00:38:20.883635",
-    "updated_at": "2025-09-02T00:38:20.883635"
+    "created_at": "2025-09-02T00:38:20",
+    "updated_at": "2025-09-02T00:38:20"
   },
   {
     "id": 2,
     "name": "Pagar Amex",
     "priority": "ALTA",
     "status": "FINALIZADA",
-    "created_at": "2025-09-02T00:40:10.424272",
-    "updated_at": "2025-09-02T00:49:05.357752"
+    "created_at": "2025-09-02T00:40:10",
+    "updated_at": "2025-09-02T00:49:05"
   },
   {
     "id": 3,
     "name": "Comprar zocalo entrepiso",
     "priority": "BAJA",
     "status": "PENDIENTE",
-    "created_at": "2025-09-02T00:42:41.351729",
-    "updated_at": "2025-09-02T00:42:41.351729"
+    "created_at": "2025-09-02T00:42:41",
+    "updated_at": "2025-09-02T00:42:41"
   },
   {
     "id": 4,
     "name": "Pagar expensas",
     "priority": "MEDIA",
     "status": "FINALIZADA",
-    "created_at": "2025-09-02T00:43:47.363588",
-    "updated_at": "2025-09-02T00:44:32.298595"
+    "created_at": "2025-09-02T00:43:47",
+    "updated_at": "2025-09-02T00:44:32"
   },
   {
     "id": 5,
-    "name": "Limpiar oficina",
+    "name": "Limpiar las Oficinas",
     "priority": "MEDIA",
-    "status": "PENDIENTE",
-    "created_at": "2025-09-02T00:45:04.622708",
-    "updated_at": "2025-09-02T00:45:04.622708"
+    "status": "EN CURSO",
+    "created_at": "2025-09-02T00:45:04",
+    "updated_at": "2025-10-05T15:02:01"
   },
   {
     "id": 6,
     "name": "Pintar terraza",
     "priority": "MEDIA",
     "status": "PENDIENTE",
-    "created_at": "2025-09-02T00:45:18.954727",
-    "updated_at": "2025-09-02T00:45:18.954727"
+    "created_at": "2025-09-02T00:45:18",
+    "updated_at": "2025-09-02T00:45:18"
   },
   {
     "id": 7,
     "name": "Lavar Moto",
     "priority": "BAJA",
     "status": "PENDIENTE",
-    "created_at": "2025-09-02T00:45:36.893067",
-    "updated_at": "2025-09-02T00:45:36.893067"
+    "created_at": "2025-09-02T00:45:36",
+    "updated_at": "2025-09-02T00:45:36"
   },
   {
     "id": 8,
     "name": "IngSoft Hacer TP presentación",
     "priority": "MEDIA",
     "status": "EN CURSO",
-    "created_at": "2025-09-02T00:46:24.220393",
-    "updated_at": "2025-09-02T00:47:38.307096"
+    "created_at": "2025-09-02T00:46:24",
+    "updated_at": "2025-09-02T00:47:38"
   },
   {
     "id": 9,
     "name": "IngSoft Hacer TP Python",
     "priority": "MEDIA",
-    "status": "EN CURSO",
-    "created_at": "2025-09-02T00:46:45.829558",
-    "updated_at": "2025-09-02T00:48:00.202937"
+    "status": "FINALIZADA",
+    "created_at": "2025-09-02T00:46:45",
+    "updated_at": "2025-10-05T17:42:33"
   },
   {
     "id": 10,
     "name": "Migrar DB proyecto SM",
     "priority": "BAJA",
     "status": "PENDIENTE",
-    "created_at": "2025-09-02T00:51:58.024118",
-    "updated_at": "2025-09-02T00:51:58.024118"
+    "created_at": "2025-09-02T00:51:58",
+    "updated_at": "2025-09-02T00:51:58"
   },
   {
     "id": 11,
     "name": "Integrar MCP server",
     "priority": "BAJA",
     "status": "FINALIZADA",
-    "created_at": "2025-09-02T00:52:21.457736",
-    "updated_at": "2025-09-02T00:52:46.161478"
+    "created_at": "2025-09-02T00:52:21",
+    "updated_at": "2025-09-02T00:52:46"
   },
   {
     "id": 12,
     "name": "Armar Frontend",
     "priority": "ALTA",
     "status": "PENDIENTE",
-    "created_at": "2025-09-02T00:53:46.965511",
-    "updated_at": "2025-09-02T00:53:46.965511"
+    "created_at": "2025-09-02T00:53:46",
+    "updated_at": "2025-09-02T00:53:46"
   },
   {
     "id": 13,
     "name": "Testear TODO App",
     "priority": "MEDIA",
     "status": "EN CURSO",
-    "created_at": "2025-09-02T00:54:09.017880",
-    "updated_at": "2025-09-02T00:55:14.296080"
+    "created_at": "2025-09-02T00:54:09",
+    "updated_at": "2025-09-02T00:55:14"
   },
   {
     "id": 14,
     "name": "Comprar Auriculares",
     "priority": "ALTA",
     "status": "PENDIENTE",
-    "created_at": "2025-09-02T00:56:16.965511",
-    "updated_at": "2025-09-02T00:56:16.965511"
+    "created_at": "2025-09-02T00:56:16",
+    "updated_at": "2025-09-02T00:56:16"
   },
   {
     "id": 15,
     "name": "Comprar Router",
     "priority": "BAJA",
     "status": "PENDIENTE",
-    "created_at": "2025-09-02T00:58:16.965511",
-    "updated_at": "2025-09-02T00:58:16.965511"
+    "created_at": "2025-09-02T00:58:16",
+    "updated_at": "2025-09-02T00:58:16"
   },
   {
     "id": 16,
     "name": "Comprar adaptador RS232",
     "priority": "BAJA",
     "status": "PENDIENTE",
-    "created_at": "2025-09-02T00:59:16.965511",
-    "updated_at": "2025-09-02T00:59:16.965511"
+    "created_at": "2025-09-02T00:59:16",
+    "updated_at": "2025-09-02T00:59:16"
   },
   {
     "id": 18,
     "name": "Comprar carbón",
     "priority": "BAJA",
     "status": "PENDIENTE",
-    "created_at": "2025-09-02T01:11:34.886010",
-    "updated_at": "2025-09-02T01:11:34.886010"
+    "created_at": "2025-09-02T01:11:34",
+    "updated_at": "2025-09-02T01:11:34"
+  },
+  {
+    "id": 19,
+    "name": "Pagar EDESUR",
+    "priority": "ALTA",
+    "status": "PENDIENTE",
+    "created_at": "2025-10-05T17:39:52",
+    "updated_at": "2025-10-05T17:39:52"
+  },
+  {
+    "id": 20,
+    "name": "Comprar marcadores",
+    "priority": "BAJA",
+    "status": "PENDIENTE",
+    "created_at": "2025-10-05T20:35:32",
+    "updated_at": "2025-10-05T20:35:32"
+  },
+  {
+    "id": 22,
+    "name": "Preparar pre-pizzas",
+    "priority": "ALTA",
+    "status": "PENDIENTE",
+    "created_at": "2025-10-05T21:20:22",
+    "updated_at": "2025-10-05T23:08:53"
+  },
+  {
+    "id": 23,
+    "name": "Preparar la cena",
+    "priority": "ALTA",
+    "status": "FINALIZADA",
+    "created_at": "2025-10-05T22:31:48",
+    "updated_at": "2025-10-05T22:32:51"
+  },
+  {
+    "id": 25,
+    "name": "rew",
+    "priority": "ALTA",
+    "status": "PENDIENTE",
+    "created_at": "2025-10-05T23:07:30",
+    "updated_at": "2025-10-05T23:07:30"
   }
 ]
