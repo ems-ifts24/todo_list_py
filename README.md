@@ -1,6 +1,6 @@
 # 📝 Gestor de Tareas en Python
 
-Aplicación de línea de comandos para gestionar tareas pendientes con prioridades, estados y exportación a CSV.
+Aplicación de línea de comandos para gestionar tareas pendientes con prioridades, estados, simulación de datos y visualización de gráficos.
 
 ## 🚀 Características
 
@@ -11,6 +11,8 @@ Aplicación de línea de comandos para gestionar tareas pendientes con prioridad
 - 📤 Exportación a CSV
 - 🔍 Búsqueda y filtrado de tareas
 - 🎨 Interfaz de colores y emojis
+- 📈 Visualización de datos con gráficos
+- 🎲 Simulación de datos para análisis
 
 ## 📦 Instalación
 
@@ -46,7 +48,9 @@ Aplicación de línea de comandos para gestionar tareas pendientes con prioridad
 4. ✏️  Actualizar tarea
 5. 🗑️  Eliminar tarea
 6. 💾 Exportar datos a CSV
-7. ❌ Salir
+7. 📊 Ver gráficos
+8. 🎲 Simulación
+0. ❌ Salir
 ```
 
 ### Visualización de Tareas
@@ -86,14 +90,34 @@ ID,NOMBRE,PRIORIDAD,ESTADO,FECHA
 ```
 todo_list_py/
 ├── todo_app/
-│   ├── data/           # Datos de la aplicación
-│   ├── exports/        # Archivos de exportación
-│   ├── models/         # Modelos de datos
-│   ├── services/       # Lógica de negocio
-│   └── main.py         # Punto de entrada
+│   ├── data/                  # Datos de la aplicación
+│   │   ├── tareas.json        # Tareas principales
+│   │   └── tareas_simuladas_*.json  # Datos simulados
+│   │
+│   ├── exports/               # Archivos de exportación
+│   │   └── yyyyMMdd_hhmmss_todo_list.csv
+│   │
+│   ├── models/                # Modelos de datos
+│   │   └── task.py
+│   │
+│   ├── services/              # Lógica de negocio
+│   │   ├── task_service.py    # Gestión de tareas
+│   │   ├── export_service.py  # Exportación a CSV
+│   │   ├── data_generator.py  # Generación de datos simulados
+│   │   └── graphics_service.py # Visualización de gráficos
+│   │
+│   ├── utils/                 # Utilidades
+│   │   └── ui_utils.py        # Interfaz de usuario
+│   │
+│   ├── simulator.py           # Módulo de simulación
+│   └── main.py                # Punto de entrada
+│
+├── .windsurf/                 # Configuración de Windsurf
+├── examples/                  # Ejemplos y datos de prueba
 ├── .gitignore
 ├── README.md
-└── requirements.txt
+├── requirements.txt
+└── arquitectura_todo_list.md  # Documentación de arquitectura
 ```
 
 ## 📝 Notas de Desarrollo

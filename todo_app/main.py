@@ -48,7 +48,7 @@ class TodoApp:
             "5": ("🗑️  Eliminar tarea", self.delete_task),
             "6": ("💾 Exportar datos a CSV", self.export_tasks),
             "7": ("🎲 Simulación", self.open_simulator),
-            "8": ("❌ Salir", self.exit_app)
+            "0": ("❌ Salir", self.exit_app)
         }
     
     def run(self) -> None:

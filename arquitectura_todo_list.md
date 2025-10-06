@@ -15,15 +15,34 @@ separación de responsabilidades y principios **SOLID**.
     ├── main.py                   # Punto de entrada del programa + clase TodoApp principal
     ├── models/
     │   └── task.py               # Modelos: Task, Priority, Status enums
-    ├── services/
-    │   ├── task_service.py       # Lógica de negocio para CRUD de tareas
-    │   └── export_service.py     # Lógica para exportar datos a CSV
+    │
+    ├── services/                 # Lógica de negocio
+    │   ├── task_service.py       # Gestión de tareas (CRUD)
+    │   ├── export_service.py     # Exportación a CSV
+    │   ├── data_generator.py     # Generación de datos simulados
+    │   └── graphics_service.py   # Visualización de gráficos
+    │
     ├── utils/
-    │   └── ui_utils.py           # Funciones para la interfaz de usuario + TablePrinter
-    ├── data/                     # Directorio para almacenamiento persistente
-    │   └── tareas.json           # Archivo JSON con las tareas
-    └── exports/                  # Directorio para archivos exportados
-        └── yyyyMMdd_hhmmss_todo_list.csv  # Plantilla de nombre para exportaciones
+    │   └── ui_utils.py           # Utilidades de interfaz de usuario
+    │
+    ├── data/                     # Datos de la aplicación
+    │   ├── tareas.json           # Tareas principales
+    │   └── tareas_simuladas_*.json  # Datos simulados generados
+    │
+    ├── exports/                  # Archivos exportados
+    │   └── yyyyMMdd_hhmmss_todo_list.csv
+    │
+    └── simulator.py              # Módulo de simulación principal
+
+    # Archivos en la raíz del proyecto
+    .windsurf/                    # Configuración de Windsurf
+    examples/                     # Ejemplos y datos de prueba
+    .gitignore
+    README.md
+    requirements.txt
+    arquitectura_todo_list.md     # Este archivo
+    01_prompt_gpt.md              # Prompt inicial
+    02_prompt_gpt_graficos.md     # Prompt para funcionalidad de gráficos
 
 ------------------------------------------------------------------------
 
@@ -81,24 +100,41 @@ separación de responsabilidades y principios **SOLID**.
 
 **Características**:
 - Manejo automático de IDs autoincrementales
-- Persistencia en JSON (`data/tareas.json`)
 - Validación de reglas de negocio (nombres únicos, transiciones de estado)
 - Carga y guardado automático de datos
 
 ------------------------------------------------------------------------
 
-### **4. services/export_service.py**
+### **3. services/export_service.py**
 
-**Responsabilidad**: Gestionar la exportación de datos a CSV.
+**Responsabilidad**: Manejar la exportación de tareas a CSV.
 
-**Funciones principales**:
-- `export_to_csv(tasks)` → Exporta tareas a formato CSV con timestamp
+**Clase principal**:
+- `ExportService` → Gestiona la exportación de tareas a formato CSV
+
+### **4. services/data_generator.py**
+
+**Responsabilidad**: Generar datos simulados para análisis y pruebas.
+
+**Clase principal**:
+- `DataGenerator` → Genera tareas simuladas con datos aleatorios pero realistas
+- Permite crear conjuntos de datos grandes para probar la aplicación
+- Mantiene un archivo separado de datos simulados
+
+### **5. services/graphics_service.py**
+
+**Responsabilidad**: Generar visualizaciones gráficas de los datos.
+
+**Clase principal**:
+- `GraphicsService` → Crea gráficos estadísticos de las tareas
+- Incluye gráficos de barras, tortas, histogramas y heatmaps
+- Permite visualizar la distribución de tareas por prioridad y estado
+- Genera un dashboard con múltiples gráficos con timestamp
 - `export_tasks_interactive(tasks)` → Proceso interactivo de exportación
 - `_generate_export_filename()` → Genera nombre único con fecha y hora
 
 **Características**:
 - Genera archivos con nombres automáticos: `yyyymmdd_hhmmss_todo_list.csv`
-- Almacenamiento en directorio `exports/`
 - Formato CSV estándar con encabezados descriptivos
 - Manejo de errores y validaciones
 
