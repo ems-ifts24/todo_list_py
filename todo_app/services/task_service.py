@@ -4,9 +4,9 @@ from pathlib import Path
 
 from ..models.task import Task, Priority, Status
 
-
+# Esta clase se encarga de gestionar las tareas.
 class TaskService:
-    # Método mágico __init__ se utiliza para inicializar una nueva instancia de la clase.
+    # __init__ se utiliza para inicializar una nueva instancia de la clase.
     # Se llama automáticamente cuando se crea un objeto de la clase usando el constructor.
     def __init__(self, data_dir: str = "data", data_file: str = "tareas.json"):
         """Inicializa el servicio de tareas con el directorio y archivo de datos.
@@ -22,12 +22,14 @@ class TaskService:
         self._load_tasks()
         self._next_id = max(self.tasks.keys(), default=0) + 1
 
+    # _ensure_data_dir_exists se encarga de asegurar que exista el directorio de datos.
     def _ensure_data_dir_exists(self) -> None:
         """Asegura que exista el directorio de datos."""
         self.data_dir.mkdir(parents=True, exist_ok=True)
         if not self.data_file.exists():
             self.data_file.write_text("[]", encoding="utf-8")
 
+    # _load_tasks se encarga de cargar las tareas desde el archivo JSON.
     def _load_tasks(self) -> None:
         """Carga las tareas desde el archivo JSON."""
         try:
@@ -40,12 +42,14 @@ class TaskService:
         except (json.JSONDecodeError, FileNotFoundError):
             self.tasks = {}
 
+    # _save_tasks se encarga de guardar las tareas en el archivo JSON.
     def _save_tasks(self) -> None:
         """Guarda las tareas en el archivo JSON."""
         tasks_data = [task.to_dict() for task in self.tasks.values()]
         with open(self.data_file, 'w', encoding='utf-8') as f:
             json.dump(tasks_data, f, ensure_ascii=False, indent=2)
 
+    # create_task se encarga de crear una nueva tarea.
     def create_task(self, name: str, priority: Priority, status: Status = None) -> Task:
         """Crea una nueva tarea.
         
@@ -77,6 +81,7 @@ class TaskService:
         self._save_tasks()
         return task
 
+    # get_task se encarga de obtener una tarea por su ID.
     def get_task(self, task_id: int) -> Optional[Task]:
         """Obtiene una tarea por su ID.
         
@@ -88,6 +93,7 @@ class TaskService:
         """
         return self.tasks.get(task_id)
 
+    # get_all_tasks se encarga de obtener todas las tareas, opcionalmente filtradas por prioridad.
     def get_all_tasks(self, priority: Optional[Priority] = None) -> List[Task]:
         """Obtiene todas las tareas, opcionalmente filtradas por prioridad.
         
@@ -102,6 +108,7 @@ class TaskService:
             tasks = [t for t in tasks if t.priority == priority]
         return sorted(tasks, key=lambda t: t.name.lower())
 
+    # update_task se encarga de actualizar una tarea existente.
     def update_task(
         self,
         task_id: int,
@@ -137,6 +144,7 @@ class TaskService:
         self._save_tasks()
         return task
 
+    # delete_task se encarga de eliminar una tarea.
     def delete_task(self, task_id: int) -> bool:
         """Elimina una tarea.
         
@@ -152,6 +160,7 @@ class TaskService:
             return True
         return False
 
+    # search_tasks se encarga de buscar tareas por nombre (coincidencia parcial sin distinción de mayúsculas/minúsculas).
     def search_tasks(self, query: str) -> List[Task]:
         """Busca tareas por nombre (coincidencia parcial sin distinción de mayúsculas/minúsculas).
         
