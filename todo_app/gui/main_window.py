@@ -37,6 +37,10 @@ class MainWindow(ctk.CTk):
         self.nav_buttons = {}  # Diccionario para los botones de navegación
         self.current_task_id = None  # ID de la tarea actualmente seleccionada
         
+        # Variables para el ordenamiento
+        self.current_sort_column = "name"  # Columna por defecto para ordenar
+        self.sort_ascending = True        # Orden ascendente por defecto
+        
         # Crear la interfaz
         self._create_sidebar()
         self._create_main_content()
@@ -247,6 +251,13 @@ class MainWindow(ctk.CTk):
         )
         self.tasks_container.pack(fill="both", expand=True)
         
+        # Crear encabezados de la tabla
+        self._create_table_headers()
+        
+        # Variable para controlar el orden actual
+        self.current_sort_column = "name"  # Columna por defecto para ordenar
+        self.sort_ascending = True        # Orden ascendente por defecto
+        
         # Cargar tareas iniciales
         self._load_tasks()
     
@@ -254,14 +265,79 @@ class MainWindow(ctk.CTk):
         """Se ejecuta cuando cambia el texto de búsqueda."""
         self._load_tasks()
     
+    def _create_table_headers(self) -> None:
+        """Crea los encabezados de la tabla con funcionalidad de ordenación."""
+        # Frame para los encabezados
+        header_frame = ctk.CTkFrame(self.tasks_container, fg_color="transparent")
+        header_frame.pack(fill="x", pady=(0, 5))
+        
+        # Configuración de las columnas
+        columns = [
+            ("name", "Nombre", 4),      # Nombre - 40% del ancho
+            ("priority", "Prioridad", 2),  # Prioridad - 20% del ancho
+            ("status", "Estado", 2),    # Estado - 20% del ancho
+            ("created_at", "Fecha", 2),  # Fecha - 15% del ancho
+            ("actions", "Acciones", 2)   # Acciones - 5% del ancho
+        ]
+        
+        # Crear cada encabezado
+        for col_id, col_name, weight in columns:
+            # Configurar el grid para el frame de encabezados
+            header_frame.columnconfigure(columns.index((col_id, col_name, weight)), weight=weight)
+            
+            # Frame para cada columna
+            col_frame = ctk.CTkFrame(header_frame, fg_color="transparent")
+            col_frame.grid(row=0, column=columns.index((col_id, col_name, weight)), 
+                         padx=2, pady=2, sticky="nsew")
+            
+            # No hacer clicable la columna de acciones
+            if col_id == "actions":
+                header = ctk.CTkLabel(
+                    col_frame,
+                    text=col_name,
+                    font=ctk.CTkFont(weight="bold"),
+                    anchor="w"
+                )
+                header.pack(fill="x", expand=True, anchor="w")
+            else:
+                header = ctk.CTkButton(
+                    col_frame,
+                    text=f"{col_name} ▼" if self.current_sort_column == col_id and not self.sort_ascending 
+                         else f"{col_name} ▲" if self.current_sort_column == col_id and self.sort_ascending 
+                         else col_name,
+                    font=ctk.CTkFont(weight="bold"),
+                    fg_color="transparent",
+                    hover_color=("gray70", "gray30"),
+                    text_color=("black", "white"),
+                    anchor="w",
+                    command=lambda c=col_id: self._sort_tasks(c)
+                )
+                header.pack(fill="x", expand=True, anchor="w")
+    
+    def _sort_tasks(self, column: str) -> None:
+        """Ordena las tareas por la columna especificada."""
+        # Cambiar el orden si se hace clic en la misma columna
+        if self.current_sort_column == column:
+            self.sort_ascending = not self.sort_ascending
+        else:
+            self.current_sort_column = column
+            self.sort_ascending = True
+        
+        # Recargar las tareas con el nuevo orden
+        self._load_tasks()
+    
     def _load_tasks(self) -> None:
         """Carga las tareas desde el servicio y las muestra en la interfaz."""
-        # Limpiar tareas actuales
+        # Limpiar tareas actuales (incluyendo los encabezados)
         if not hasattr(self, 'tasks_container'):
             return
             
+        # Eliminar todos los widgets del contenedor
         for widget in self.tasks_container.winfo_children():
             widget.destroy()
+        
+        # Volver a crear los encabezados
+        self._create_table_headers()
         
         # Obtener término de búsqueda
         search_term = self.search_var.get().strip() if hasattr(self, 'search_var') else ""
@@ -272,14 +348,30 @@ class MainWindow(ctk.CTk):
         else:
             tasks = self.task_service.get_all_tasks()
         
+        # Ordenar tareas según la columna seleccionada
+        if tasks and self.current_sort_column:
+            reverse_sort = not self.sort_ascending
+            
+            if self.current_sort_column == "name":
+                tasks.sort(key=lambda t: t.name.lower(), reverse=reverse_sort)
+            elif self.current_sort_column == "priority":
+                tasks.sort(key=lambda t: (t.priority.value if t.priority else ""), reverse=reverse_sort)
+            elif self.current_sort_column == "status":
+                tasks.sort(key=lambda t: (t.status.value if t.status else ""), reverse=reverse_sort)
+            elif self.current_sort_column == "created_at" and hasattr(tasks[0], 'created_at'):
+                tasks.sort(key=lambda t: t.created_at if hasattr(t, 'created_at') else "", reverse=reverse_sort)
+        
         # Mostrar mensaje si no hay tareas
         if not tasks:
+            no_tasks_frame = ctk.CTkFrame(self.tasks_container, fg_color="transparent")
+            no_tasks_frame.pack(fill="x", pady=10)
+            
             no_tasks_label = ctk.CTkLabel(
-                self.tasks_container,
+                no_tasks_frame,
                 text="No hay tareas para mostrar" if not search_term else f"No se encontraron tareas con: '{search_term}'",
                 font=ctk.CTkFont(size=14, slant="italic")
             )
-            no_tasks_label.pack(pady=40)
+            no_tasks_label.pack(pady=20)
             return
         
         # Mostrar cada tarea
@@ -287,234 +379,109 @@ class MainWindow(ctk.CTk):
             self._create_task_widget(task)
     
     def _create_task_widget(self, task: Task) -> None:
-        """Crea un widget para una tarea en la lista."""
-        # Colores para estados y prioridades
-        status_colors = {
-            Status.PENDING: "#f39c12",  # Amarillo
-            Status.IN_PROGRESS: "#3498db",  # Azul
-            Status.COMPLETED: "#2ecc71"  # Verde
-        }
+        """Crea un widget para mostrar una tarea en la lista."""
+        # Frame principal de la tarea
+        task_frame = ctk.CTkFrame(self.tasks_container, fg_color=("#f0f0f0", "#2b2b2b"))
+        task_frame.pack(fill="x", pady=2, padx=5)
         
-        priority_colors = {
-            Priority.HIGH: "#e74c3c",  # Rojo
-            Priority.MEDIUM: "#f39c12",  # Naranja
-            Priority.LOW: "#2ecc71"  # Verde
-        }
+        # Configuración de las columnas (debe coincidir con los encabezados)
+        columns = [
+            ("name", 4),      # Nombre - 40% del ancho
+            ("priority", 2),  # Prioridad - 20% del ancho
+            ("status", 2),    # Estado - 20% del ancho
+            ("created_at", 2), # Fecha - 15% del ancho
+            ("actions", 2)     # Acciones - 5% del ancho
+        ]
         
-        # Determinar si la tarea está completada
-        is_completed = task.status == Status.COMPLETED
-        
-        # Frame de la tarea
-        task_frame = ctk.CTkFrame(
-            self.tasks_container,
-            corner_radius=8,
-            fg_color=("gray90", "gray20")
-        )
-        task_frame.pack(fill="x", pady=5)
-        
-        # Configurar grid para el contenido
-        task_frame.columnconfigure(0, weight=4)  # Nombre
-        task_frame.columnconfigure(1, weight=1)  # Prioridad
-        task_frame.columnconfigure(2, weight=1)  # Estado
-        task_frame.columnconfigure(3, weight=2)  # Fechas
-        task_frame.columnconfigure(4, weight=1)  # Botones
-        
-        # Contenido de la tarea
-        task_content = ctk.CTkFrame(task_frame, fg_color="transparent")
-        task_content.grid(row=0, column=0, columnspan=5, sticky="nsew", padx=10, pady=5)
-        
-        # Configurar grid para el contenido
-        task_content.columnconfigure(0, weight=4)  # Nombre
-        task_content.columnconfigure(1, weight=1)  # Prioridad
-        task_content.columnconfigure(2, weight=1)  # Estado
-        task_content.columnconfigure(3, weight=2)  # Fechas
-        task_content.columnconfigure(4, weight=1)  # Botones
-        
-        # Configurar alineación de columnas
-        for col in range(5):
-            task_content.grid_columnconfigure(col, weight=1 if col in [0, 3] else 0)
+        # Configurar el grid para los elementos de la tarea
+        for idx, (col_id, weight) in enumerate(columns):
+            task_frame.columnconfigure(idx, weight=weight)
         
         # Nombre de la tarea
-        task_name = ctk.CTkLabel(
-            task_content,
+        name_label = ctk.CTkLabel(
+            task_frame,
             text=task.name,
-            font=ctk.CTkFont(weight="bold"),
             anchor="w",
-            text_color=("gray50", "gray70") if is_completed else None,
-            justify="left"
+            font=ctk.CTkFont(weight="bold" if task.status != Status.COMPLETED else "bold",
+                           overstrike=task.status == Status.COMPLETED)
         )
-        task_name.grid(row=0, column=0, sticky="w", padx=10)
+        name_label.grid(row=0, column=0, padx=10, pady=5, sticky="w")
         
         # Prioridad
+        priority_colors = {
+            Priority.HIGH: "#e74c3c",
+            Priority.MEDIUM: "#f39c12",
+            Priority.LOW: "#2ecc71"
+        }
         priority_label = ctk.CTkLabel(
-            task_content,
-            text=task.priority.value,
-            text_color=("gray60", "gray50") if is_completed else priority_colors.get(task.priority, "gray"),
-            font=ctk.CTkFont(weight="bold"),
-            anchor="w"
+            task_frame,
+            text=task.priority.value if task.priority else "",
+            text_color=priority_colors.get(task.priority, "gray")
         )
-        priority_label.grid(row=0, column=1, sticky="w", padx=5)
+        priority_label.grid(row=0, column=1, padx=5, pady=5)
         
         # Estado
+        status_colors = {
+            Status.PENDING: "#f39c12",
+            Status.IN_PROGRESS: "#3498db",
+            Status.COMPLETED: "#2ecc71"
+        }
         status_label = ctk.CTkLabel(
-            task_content,
-            text=task.status.value,
-            text_color=("gray60", "gray50") if is_completed else status_colors.get(task.status, "gray"),
-            font=ctk.CTkFont(weight="bold"),
-            anchor="w"
+            task_frame,
+            text=task.status.value if task.status else "",
+            text_color=status_colors.get(task.status, "gray")
         )
-        status_label.grid(row=0, column=2, sticky="w", padx=5)
+        status_label.grid(row=0, column=2, padx=5, pady=5)
         
-        # Fechas
-        created_str = task.created_at.strftime("%d/%m/%Y")
-        updated_str = task.updated_at.strftime("%d/%m/%Y")
+        # Fecha
+        date_str = task.created_at.strftime("%d/%m/%Y") if hasattr(task, 'created_at') and task.created_at else ""
+        date_label = ctk.CTkLabel(task_frame, text=date_str)
+        date_label.grid(row=0, column=3, padx=5, pady=5)
         
-        dates_label = ctk.CTkLabel(
-            task_content,
-            text=f"Creada: {created_str} | Actualizada: {updated_str}",
-            font=ctk.CTkFont(size=10),
-            text_color=("gray60", "gray60"),
-            anchor="w"
-        )
-        dates_label.grid(row=0, column=3, sticky="w", padx=5)
+        # Frame para los botones de acción
+        actions_frame = ctk.CTkFrame(task_frame, fg_color="transparent")
+        actions_frame.grid(row=0, column=4, padx=5, pady=5, sticky="e")
         
-        # Botones de acción
-        actions_frame = ctk.CTkFrame(task_content, fg_color="transparent")
-        actions_frame.grid(row=0, column=4, padx=5, sticky="e")
-        
-        # Botón de editar (siempre visible)
+        # Botón de editar
         edit_btn = ctk.CTkButton(
             actions_frame,
             text="✏️",
             width=30,
             height=30,
             fg_color="transparent",
-            text_color=("gray60", "gray50") if is_completed else ("#3498db", "#2980b9"),
-            hover_color=("#d6eaf8", "#1a5276") if not is_completed else None,
-            command=None if is_completed else (lambda t=task: self._show_edit_task_dialog(t)),
-            state="disabled" if is_completed else "normal"
+            text_color=("#3498db", "#2980b9"),
+            hover_color=("#d6eaf8", "#1a5276"),
+            command=lambda t=task: self._show_edit_task_dialog(t) if task.status != Status.COMPLETED else None,
+            state="normal" if task.status != Status.COMPLETED else "disabled"
         )
-        # Añadir tooltip manual
-        def show_edit_tooltip(event, text="Editar tarea"):
-            x, y, _, _ = edit_btn.bbox("insert")
-            x += edit_btn.winfo_rootx() + 25
-            y += edit_btn.winfo_rooty() + 25
-            
-            tooltip = ctk.CTkToplevel(edit_btn)
-            tooltip.wm_overrideredirect(True)
-            tooltip.wm_geometry(f"+{x}+{y}")
-            
-            label = ctk.CTkLabel(
-                tooltip,
-                text=text,
-                font=ctk.CTkFont(size=12),
-                corner_radius=6,
-                fg_color=("gray70", "gray30"),
-                text_color=("black", "white"),
-                padx=10,
-                pady=5
-            )
-            label.pack()
-            tooltip.label = label
-            edit_btn.tooltip = tooltip
-        
-        def hide_tooltip(event):
-            if hasattr(edit_btn, 'tooltip'):
-                edit_btn.tooltip.destroy()
-                delattr(edit_btn, 'tooltip')
-        
-        edit_btn.bind("<Enter>", lambda e: show_edit_tooltip(e, "Editar tarea" if not is_completed else "No se puede editar una tarea completada"))
-        edit_btn.bind("<Leave>", hide_tooltip)
         edit_btn.pack(side="left", padx=2)
         
-        # Botón de eliminar (siempre visible)
+        # Botón de eliminar
         delete_btn = ctk.CTkButton(
             actions_frame,
             text="🗑️",
             width=30,
             height=30,
             fg_color="transparent",
-            text_color=("gray60", "gray50") if is_completed else ("#e74c3c", "#c0392b"),
-            hover_color=("#f5b7b1", "#78281F") if not is_completed else None,
-            command=None if is_completed else (lambda t=task: self._confirm_delete_task(t)),
-            state="disabled" if is_completed else "normal"
+            text_color=("#e74c3c", "#c0392b"),
+            hover_color=("#f5b7b1", "#78281F"),
+            command=lambda t=task: self._confirm_delete_task(t) if task.status != Status.COMPLETED else None,
+            state="normal" if task.status != Status.COMPLETED else "disabled"
         )
-        # Añadir tooltip manual
-        def show_delete_tooltip(event, text="Eliminar tarea"):
-            x, y, _, _ = delete_btn.bbox("insert")
-            x += delete_btn.winfo_rootx() + 25
-            y += delete_btn.winfo_rooty() + 25
-            
-            tooltip = ctk.CTkToplevel(delete_btn)
-            tooltip.wm_overrideredirect(True)
-            tooltip.wm_geometry(f"+{x}+{y}")
-            
-            label = ctk.CTkLabel(
-                tooltip,
-                text=text,
-                font=ctk.CTkFont(size=12),
-                corner_radius=6,
-                fg_color=("gray70", "gray30"),
-                text_color=("black", "white"),
-                padx=10,
-                pady=5
-            )
-            label.pack()
-            tooltip.label = label
-            delete_btn.tooltip = tooltip
-        
-        def hide_delete_tooltip(event):
-            if hasattr(delete_btn, 'tooltip'):
-                delete_btn.tooltip.destroy()
-                delattr(delete_btn, 'tooltip')
-        
-        delete_btn.bind("<Enter>", lambda e: show_delete_tooltip(e, "Eliminar tarea" if not is_completed else "No se puede eliminar una tarea completada"))
-        delete_btn.bind("<Leave>", hide_delete_tooltip)
         delete_btn.pack(side="left", padx=2)
         
-        # Botón de completar/marcar como pendiente
-        complete_text = "✓" if not is_completed else "↩"
+        # Botón de completar/reabrir
+        complete_text = "✓" if task.status != Status.COMPLETED else "↩"
         complete_btn = ctk.CTkButton(
             actions_frame,
             text=complete_text,
             width=30,
             height=30,
-            fg_color=("#2ecc71", "#27ae60") if not is_completed else ("#95a5a6", "#7f8c8d"),
-            hover_color=("#27ae60", "#219653") if not is_completed else None,
+            fg_color=("#2ecc71", "#27ae60") if task.status != Status.COMPLETED else ("#95a5a6", "#7f8c8d"),
+            hover_color=("#27ae60", "#219653") if task.status != Status.COMPLETED else None,
             text_color=("white", "white"),
-            command=lambda t=task: self._complete_task(t) if not is_completed else self._reopen_task(t)
+            command=lambda t=task: self._complete_task(t) if task.status != Status.COMPLETED else self._reopen_task(t)
         )
-        # Añadir tooltip manual
-        def show_complete_tooltip(event, text):
-            x, y, _, _ = complete_btn.bbox("insert")
-            x += complete_btn.winfo_rootx() + 25
-            y += complete_btn.winfo_rooty() + 25
-            
-            tooltip = ctk.CTkToplevel(complete_btn)
-            tooltip.wm_overrideredirect(True)
-            tooltip.wm_geometry(f"+{x}+{y}")
-            
-            label = ctk.CTkLabel(
-                tooltip,
-                text=text,
-                font=ctk.CTkFont(size=12),
-                corner_radius=6,
-                fg_color=("gray70", "gray30"),
-                text_color=("black", "white"),
-                padx=10,
-                pady=5
-            )
-            label.pack()
-            tooltip.label = label
-            complete_btn.tooltip = tooltip
-        
-        def hide_complete_tooltip(event):
-            if hasattr(complete_btn, 'tooltip'):
-                complete_btn.tooltip.destroy()
-                delattr(complete_btn, 'tooltip')
-        
-        complete_btn.bind("<Enter>", lambda e: show_complete_tooltip(e, "Completar tarea" if not is_completed else "Reabrir tarea"))
-        complete_btn.bind("<Leave>", hide_complete_tooltip)
         complete_btn.pack(side="left", padx=2)
     
     def _complete_task(self, task: Task) -> None:
@@ -526,20 +493,186 @@ class MainWindow(ctk.CTk):
             )
             self._load_tasks()  # Recargar la lista de tareas
         except Exception as e:
-            print(f"Error al marcar la tarea como completada: {e}")
+            print(f"Error al completar la tarea: {e}")
+    
+    def _reopen_task(self, task: Task) -> None:
+        """Vuelve a abrir una tarea completada."""
+        try:
+            self.task_service.update_task(
+                task_id=task.id,
+                status=Status.PENDING
+            )
+            self._load_tasks()  # Recargar la lista de tareas
+        except Exception as e:
+            print(f"Error al reabrir la tarea: {e}")
+
+    def _show_edit_task_dialog(self, task: Task) -> None:
+        """Muestra el diálogo para editar una tarea existente."""
+        dialog = ctk.CTkToplevel(self)
+        dialog.title(f"Editar Tarea: {task.name}")
+        dialog.geometry("500x300")
+        dialog.grab_set()  # Hace que el diálogo sea modal
+            
+        # Centrar el diálogo en la pantalla
+        dialog.update_idletasks()
+        width = dialog.winfo_width()
+        height = dialog.winfo_height()
+        x = (dialog.winfo_screenwidth() // 2) - (width // 2)
+        y = (dialog.winfo_screenheight() // 2) - (height // 2)
+        dialog.geometry(f'{width}x{height}+{x}+{y}')
+            
+        # Título
+        ctk.CTkLabel(
+            dialog,
+            text=f"Editar Tarea: {task.name}",
+            font=ctk.CTkFont(size=20, weight="bold")
+        ).pack(pady=10)
+            
+        # Formulario
+        form_frame = ctk.CTkFrame(dialog, fg_color="transparent")
+        form_frame.pack(padx=20, pady=10, fill="both", expand=True)
+            
+        # Campo de nombre
+        ctk.CTkLabel(form_frame, text="Nombre:", anchor="w").pack(fill="x", pady=(5, 0))
+        name_entry = ctk.CTkEntry(form_frame, placeholder_text="Descripción de la tarea")
+        name_entry.insert(0, task.name)
+        name_entry.pack(fill="x", pady=(0, 10))
+            
+        # Prioridad
+        ctk.CTkLabel(form_frame, text="Prioridad:", anchor="w").pack(fill="x", pady=(5, 0))
+        priority_var = ctk.StringVar(value=task.priority.value)
+        priority_menu = ctk.CTkOptionMenu(
+            form_frame,
+            values=[p.value for p in Priority],
+            variable=priority_var,
+            fg_color=("gray70", "gray30"),
+            button_color=("gray60", "gray40"),
+            button_hover_color=("gray50", "gray50")
+        )
+        priority_menu.pack(fill="x", pady=(0, 10))
+            
+        # Estado
+        ctk.CTkLabel(form_frame, text="Estado:", anchor="w").pack(fill="x", pady=(5, 0))
+        status_var = ctk.StringVar(value=task.status.value)
+        status_menu = ctk.CTkOptionMenu(
+            form_frame,
+            values=[s.value for s in Status],
+            variable=status_var,
+            fg_color=("gray70", "gray30"),
+            button_color=("gray60", "gray40"),
+            button_hover_color=("gray50", "gray50")
+        )
+        status_menu.pack(fill="x", pady=(0, 20))
+            
+        # Botones
+        buttons_frame = ctk.CTkFrame(dialog, fg_color="transparent")
+        buttons_frame.pack(pady=10)
+            
+        def save_changes():
+            try:
+                name = name_entry.get().strip()
+                if not name:
+                    raise ValueError("El nombre de la tarea no puede estar vacío")
+                    
+                priority = Priority(priority_var.get())
+                status = Status(status_var.get())
+                    
+                # Actualizar la tarea
+                self.task_service.update_task(
+                    task_id=task.id,
+                    name=name,
+                    priority=priority,
+                    status=status
+                )
+                    
+                # Actualizar la lista de tareas
+                self._load_tasks()
+                dialog.destroy()
+                    
+            except Exception as e:
+                # Mostrar mensaje de error
+                error_label = ctk.CTkLabel(
+                    form_frame,
+                    text=str(e),
+                    text_color="red"
+                )
+                error_label.pack(pady=5)
+
+        # Botón de guardar
+        ctk.CTkButton(
+            buttons_frame,
+            text="Guardar Cambios",
+            command=save_changes,
+            fg_color=("#2ecc71", "#27ae60"),
+            hover_color=("#27ae60", "#219653")
+        ).pack(side="left", padx=5)
+        
+        # Botón de cancelar
+        ctk.CTkButton(
+            buttons_frame,
+            text="Cancelar",
+            command=dialog.destroy,
+            fg_color=("gray70", "gray30"),
+            hover_color=("gray60", "gray40")
+        ).pack(side="left", padx=5)
     
     def _create_sidebar(self) -> None:
-        """Crea la barra lateral con los botones de navegación."""
-        # Frame de la barra lateral
-        self.sidebar = ctk.CTkFrame(self, width=220, corner_radius=0, fg_color=("gray90", "gray16"))
+        """Crea la barra lateral de navegación."""
+        # Crear frame de la barra lateral
+        self.sidebar = ctk.CTkFrame(self, corner_radius=0)
         self.sidebar.grid(row=0, column=0, rowspan=4, sticky="nsew")
+        
+        # Configurar el grid de la barra lateral
+        self.sidebar.grid_columnconfigure(0, weight=1)
+        self.sidebar.grid_rowconfigure(4, weight=1)
         
         # Título de la aplicación
         self.logo_label = ctk.CTkLabel(
             self.sidebar, 
             text="Gestor de Tareas",
             font=ctk.CTkFont(size=20, weight="bold"),
-            text_color=("gray10", "gray90")  
+            text_color=("gray10", "gray90")
+        )
+        self.logo_label.grid(row=0, column=0, padx=20, pady=(20, 10))
+        
+        # Botones de navegación
+        nav_items = [
+            ("📋 Tareas", "tasks"),
+            ("📊 Estadísticas", "stats"),
+            ("⚙️ Configuración", "settings")
+        ]
+        
+        for i, (text, view_name) in enumerate(nav_items, 1):
+            btn = ctk.CTkButton(
+                self.sidebar,
+                text=text,
+                font=ctk.CTkFont(weight="bold"),
+                fg_color="transparent",
+                text_color=("gray10", "gray90"),
+                hover_color=("gray70", "gray30"),
+                anchor="w",
+                command=lambda v=view_name: self.show_view(v)
+            )
+            btn.grid(row=i, column=0, padx=20, pady=5, sticky="ew")
+            self.nav_buttons[view_name] = btn
+            
+        # Botón de salir
+        exit_btn = ctk.CTkButton(
+            self.sidebar,
+            text="🚪 Salir",
+            font=ctk.CTkFont(weight="bold"),
+            fg_color="#e74c3c",
+            hover_color="#c0392b",
+            command=self.quit
+        )
+        exit_btn.grid(row=10, column=0, padx=20, pady=20, sticky="s")
+        
+        # Título de la aplicación
+        self.logo_label = ctk.CTkLabel(
+            self.sidebar, 
+            text="Gestor de Tareas",
+            font=ctk.CTkFont(size=20, weight="bold"),
+            text_color=("gray10", "gray90")
         )
         self.logo_label.grid(row=0, column=0, padx=20, pady=(20, 10))
         
