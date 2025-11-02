@@ -5,30 +5,23 @@ Aplicación de gestión de tareas con persistencia y exportación de datos.
 """
 import sys  # Importado para agregar el directorio raíz al PATH
 import os   # Importado para obtener la ruta del directorio raíz
-from typing import Optional, List, Any
-# Importado para tipado de datos
-# Opcional: mejora el manejo de valores nulos. Indicando que la variable "puede" ser de un tipo de dato o ser nula.
-# List: lista de datos.
-# Any: variable que puede ser de cualquier tipo de dato.
-# Por ejemplo, se puede definir la firma de la función como `def get_tasks() -> List[Task]` indicando que la función retorna una lista de objetos `Task`.
-# Esto ayuda a Python a detectar posibles errores en tiempo de compilación y a ofrecer sugerencias de autocompletado en el editor de código.
+import argparse
+from typing import Optional, List, Any, Tuple, Dict
 
+# Inicialización de colorama para la interfaz de consola
 from colorama import init as init_colorama, Style
-# Importa la función `init` y `Style` de la biblioteca `colorama` para su inicialización.
-# Esta biblioteca permite agregar colores y estilos a la salida de la consola en Python. Como mensajes de error, advertencias y información.
-
 init_colorama()  # Inicializa colorama
 
-# Agrega el directorio raíz del proyecto al PATH de Python,
-# para que Python pueda encontrar los módulos definidos en el directorio raíz.
+# Agrega el directorio raíz del proyecto al PATH de Python
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-from todo_app.models.task import Task, Priority, Status  # Para poder usar los métodos en cada una de las clase
-from todo_app.services.task_service import TaskService  # Para usar los métodos de la clase TaskService
-from todo_app.services.export_service import ExportService  # Para exportar datos a CSV
-from todo_app.services.graphics_service import GraphicsService  # Para generar gráficos
-from todo_app.utils.ui_utils import ConsoleUI, TablePrinter, TextColor  # Permite mostrar mensajes en consola con colores y estilos
-from todo_app.simulator import Simulator  # Para acceder al módulo de simulación
+# Importaciones compartidas
+from todo_app.models.task import Task, Priority, Status
+from todo_app.services.task_service import TaskService
+from todo_app.services.export_service import ExportService
+from todo_app.services.graphics_service import GraphicsService
+from todo_app.utils.ui_utils import ConsoleUI, TablePrinter, TextColor
+from todo_app.simulator import Simulator
 
 
 class TodoApp:
@@ -535,29 +528,51 @@ class TodoApp:
     
     def _handle_shutdown(self) -> None:
         """Maneja el cierre de la aplicación."""
-        ConsoleUI.print_info("\nSaliendo de la aplicación...")
-        self.running = False
+        if hasattr(self, 'running'):
+            self.running = False
 
-
-def main():
-    """Punto de entrada de la aplicación."""
+def run_cli() -> None:
+    """Ejecuta la aplicación en modo línea de comandos."""
     try:
         app = TodoApp()
         app.run()
+    except KeyboardInterrupt:
+        print("\n\n¡Hasta luego! 👋")
     except Exception as e:
-        ConsoleUI.print_error(f"Error inesperado: {str(e)}")
+        print(f"\n{TextColor.ERROR.value}Error inesperado:{Style.RESET_ALL} {str(e)}")
         import traceback
         traceback.print_exc()
         input("\nPresione Enter para salir...")
-    finally:
-        # Ensure colorama is properly reset
-        from colorama import deinit
-        deinit()
 
-# esta condición es el punto de entrada del programa. Esto permite ejecutar el archivo como un script y no como un módulo
-# __name__ es una variable que contiene el nombre del módulo actual
-# Si el archivo se ejecuta directamente, __name__ es "__main__"
-# Si el archivo se importa como módulo, __name__ es el nombre del módulo
-# Si esta condición no se pone, el código dentro del if se ejecutará cuando el archivo se importe como módulo
+def run_gui() -> None:
+    """Ejecuta la aplicación con interfaz gráfica."""
+    try:
+        from todo_app.gui.main_window import run_gui as start_gui
+        start_gui()
+    except ImportError as e:
+        print(f"Error al cargar la interfaz gráfica: {e}")
+        print("Asegúrate de tener instaladas todas las dependencias.")
+        print("Puedes instalarlas con: pip install customtkinter")
+        input("Presiona Enter para salir...")
+
+def parse_arguments() -> argparse.Namespace:
+    """Parsea los argumentos de línea de comandos."""
+    parser = argparse.ArgumentParser(description='Aplicación de gestión de tareas')
+    parser.add_argument(
+        '--gui', 
+        action='store_true',
+        help='Ejecutar la aplicación con interfaz gráfica (requiere customtkinter)'
+    )
+    return parser.parse_args()
+
+def main() -> None:
+    """Punto de entrada principal de la aplicación."""
+    args = parse_arguments()
+    
+    if args.gui:
+        run_gui()
+    else:
+        run_cli()
+
 if __name__ == "__main__":
     main()
