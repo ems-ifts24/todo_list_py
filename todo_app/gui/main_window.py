@@ -323,7 +323,7 @@ class MainWindow(ctk.CTk):
         new_task_btn.pack(side="left")
         
         # Contenedor para la lista de tareas
-        self.tasks_container = ctk.CTkScrollableFrame(
+        self.tasks_container = ctk.CTkFrame(
             self.main_content,
             fg_color="transparent"
         )
@@ -1124,8 +1124,8 @@ class MainWindow(ctk.CTk):
         dialog = ctk.CTkToplevel(self)
         dialog.title("Nueva Tarea")
         dialog.resizable(True, True)
-        dialog.minsize(550, 500)  # Tamaño mínimo más pequeño
         dialog.geometry("600x600")  # Tamaño inicial más compacto
+        dialog.minsize(450, 350)  # Tamaño mínimo más pequeño
         self._setup_window_resize_handler(dialog, "Nueva Tarea")
         dialog.grab_set()  # Hace que el diálogo sea modal
         
