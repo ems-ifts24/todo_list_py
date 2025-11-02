@@ -35,7 +35,8 @@ class MainWindow(ctk.CTk):
         # Centrar la ventana después de que esté completamente creada
         self.after(100, self._center_window)
         
-        # Configurar tema por defecto
+        # Configurar tema por defecto en español
+        self.current_theme = "Oscuro"  # Tema predeterminado en español
         ctk.set_appearance_mode("dark")
         
         # Configurar el grid principal
@@ -258,7 +259,7 @@ class MainWindow(ctk.CTk):
         self.theme_var = ctk.StringVar(value=ctk.get_appearance_mode().capitalize())
         theme_menu = ctk.CTkOptionMenu(
             theme_frame,
-            values=["Oscuro", "Claro", "Sistema"],
+            values=["Oscuro", "Claro"],
             variable=self.theme_var,
             command=self._change_theme,
             fg_color=("gray70", "gray30"),
@@ -271,10 +272,21 @@ class MainWindow(ctk.CTk):
         """Cambia el tema de la aplicación."""
         theme_map = {
             "Oscuro": "dark",
-            "Claro": "light",
-            "Sistema": "system"
+            "Claro": "light"
         }
-        ctk.set_appearance_mode(theme_map.get(new_theme, "system"))
+        
+        # Actualizar el tema
+        mode = theme_map.get(new_theme, "dark")
+        ctk.set_appearance_mode(mode)
+        
+        # Actualizar el tema actual
+        self.current_theme = new_theme
+        
+        # Actualizar colores de la barra lateral según el tema
+        if mode == "light":
+            self.sidebar.configure(fg_color="gray90")
+        else:
+            self.sidebar.configure(fg_color=("gray16", "gray16"))
     
     def _show_tasks_view(self) -> None:
         """Muestra la vista de tareas."""
@@ -869,7 +881,7 @@ class MainWindow(ctk.CTk):
         
         # Configurar el grid de la barra lateral
         self.sidebar.grid_columnconfigure(0, weight=1)
-        self.sidebar.grid_rowconfigure(4, weight=1)
+        self.sidebar.grid_rowconfigure(3, weight=1)
         
         # Título de la aplicación
         self.logo_label = ctk.CTkLabel(
@@ -883,49 +895,7 @@ class MainWindow(ctk.CTk):
         # Botones de navegación
         nav_items = [
             ("📋 Tareas", "tasks"),
-            ("📊 Estadísticas", "stats"),
-            ("⚙️ Configuración", "settings")
-        ]
-        
-        for i, (text, view_name) in enumerate(nav_items, 1):
-            btn = ctk.CTkButton(
-                self.sidebar,
-                text=text,
-                font=ctk.CTkFont(weight="bold"),
-                fg_color="transparent",
-                text_color=("gray10", "gray90"),
-                hover_color=("gray70", "gray30"),
-                anchor="w",
-                command=lambda v=view_name: self.show_view(v)
-            )
-            btn.grid(row=i, column=0, padx=20, pady=5, sticky="ew")
-            self.nav_buttons[view_name] = btn
-            
-        # Botón de salir
-        exit_btn = ctk.CTkButton(
-            self.sidebar,
-            text="🚪 Salir",
-            font=ctk.CTkFont(weight="bold"),
-            fg_color="#e74c3c",
-            hover_color="#c0392b",
-            command=self.quit
-        )
-        exit_btn.grid(row=10, column=0, padx=20, pady=20, sticky="s")
-        
-        # Título de la aplicación
-        self.logo_label = ctk.CTkLabel(
-            self.sidebar, 
-            text="Gestor de Tareas",
-            font=ctk.CTkFont(size=20, weight="bold"),
-            text_color=("gray10", "gray90")
-        )
-        self.logo_label.grid(row=0, column=0, padx=20, pady=(20, 10))
-        
-        # Botones de navegación
-        nav_items = [
-            ("📋 Tareas", "tasks"),
-            ("📊 Estadísticas", "stats"),
-            ("⚙️ Configuración", "settings")
+            ("📊 Estadísticas", "stats")
         ]
         
         # Crear botones de navegación
@@ -943,29 +913,53 @@ class MainWindow(ctk.CTk):
             btn.grid(row=i, column=0, padx=20, pady=5, sticky="ew")
             self.nav_buttons[view_name] = btn
             
-        # Tema y apariencia
-        self.appearance_frame = ctk.CTkFrame(self.sidebar, fg_color="transparent")
-        self.appearance_frame.grid(row=5, column=0, padx=10, pady=(20, 10), sticky="ew")
+        # Frame para el selector de tema
+        theme_frame = ctk.CTkFrame(self.sidebar, fg_color="transparent")
+        theme_frame.grid(row=5, column=0, padx=10, pady=(20, 10), sticky="ew")
         
-        self.appearance_mode_label = ctk.CTkLabel(
-            self.appearance_frame, 
+        # Título del selector de tema
+        ctk.CTkLabel(
+            theme_frame, 
             text="Tema:",
             text_color=("gray10", "gray90"),
             anchor="w"
-        )
-        self.appearance_mode_label.pack(side="left", padx=(10, 5))
+        ).pack(side="left", padx=(10, 5))
         
-        self.appearance_mode_menu = ctk.CTkOptionMenu(
-            self.appearance_frame,
-            values=["Oscuro", "Claro", "Sistema"],
-            command=self.change_appearance_mode,
+        # Selector de tema
+        # Mapeo entre los valores internos y los textos en español
+        self.theme_map = {
+            "light": "Claro",
+            "dark": "Oscuro"
+        }
+        
+        # Obtener el tema actual en español
+        current_mode = ctk.get_appearance_mode()
+        current_theme = self.theme_map.get(current_mode, "Oscuro")
+        
+        self.theme_var = ctk.StringVar(value=current_theme)
+        theme_menu = ctk.CTkOptionMenu(
+            theme_frame,
+            values=["Oscuro", "Claro"],
+            variable=self.theme_var,
+            command=self._change_theme,
             width=100,
             dropdown_fg_color=("gray90", "gray16"),
-            button_color=("gray80", "gray25"),
+            button_color=("gray60", "gray40"),
             button_hover_color=("gray70", "gray35"),
             text_color=("gray10", "gray90")
         )
-        self.appearance_mode_menu.pack(side="right", padx=(0, 10))
+        theme_menu.pack(side="right", padx=(0, 10))
+        
+        # Botón de salir
+        exit_btn = ctk.CTkButton(
+            self.sidebar,
+            text="🚪 Salir",
+            font=ctk.CTkFont(weight="bold"),
+            fg_color="#e74c3c",
+            hover_color="#c0392b",
+            command=self.quit
+        )
+        exit_btn.grid(row=10, column=0, padx=20, pady=20, sticky="s")
     
     def _create_main_content(self) -> None:
         """Crea el área de contenido principal."""
@@ -1264,8 +1258,7 @@ class MainWindow(ctk.CTk):
         """Cambia el tema de la aplicación."""
         mode_map = {
             "Claro": "light",
-            "Oscuro": "dark",
-            "Sistema": "system"
+            "Oscuro": "dark"
         }
         
         # Actualizar el tema
