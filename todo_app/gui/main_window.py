@@ -3,13 +3,16 @@ Ventana principal de la aplicación de tareas.
 """
 import customtkinter as ctk
 from typing import Dict, Callable, Any, Optional, List
-from pathlib import Path
+import tkinter as tk
+from tkinter import messagebox
+from datetime import datetime, timedelta
 import os
-from datetime import datetime
+import re
+import webbrowser
 
-# Importar modelos y servicios
 from ..models.task import Task, Priority, Status
 from ..services.task_service import TaskService
+from ..services.graphics_service import GraphicsService
 
 class MainWindow(ctk.CTk):
     """Clase principal de la ventana de la aplicación."""
@@ -45,6 +48,10 @@ class MainWindow(ctk.CTk):
         
         # Inicializar servicios
         self.task_service = TaskService()
+        
+        # Inicializar servicio de exportación (importación diferida para evitar dependencia circular)
+        from ..services.export_service import ExportService
+        self.export_service = ExportService()
         
         # Inicializar variables de estado
         self.current_view = "tasks"  # Vista por defecto
@@ -293,7 +300,7 @@ class MainWindow(ctk.CTk):
         # Título
         title_label = ctk.CTkLabel(
             self.main_content,
-            text="📋 Mis Tareas",
+            text=" Mis Tareas",
             font=ctk.CTkFont(size=24, weight="bold")
         )
         title_label.pack(pady=(0, 20), anchor="w")
@@ -315,12 +322,23 @@ class MainWindow(ctk.CTk):
         
         new_task_btn = ctk.CTkButton(
             search_frame,
-            text="➕ Nueva Tarea",
+            text=" Nueva Tarea",
             command=self._show_new_task_dialog,
             fg_color=("gray70", "gray30"),
             hover_color=("gray60", "gray40")
         )
-        new_task_btn.pack(side="left")
+        new_task_btn.pack(side="left", padx=(0, 10))
+        
+        # Botón para exportar a CSV
+        export_btn = ctk.CTkButton(
+            search_frame,
+            text=" Exportar a CSV",
+            command=self._export_to_csv,
+            fg_color=("#2ecc71", "#27ae60"),
+            hover_color=("#27ae60", "#219653"),
+            text_color=("white", "white")
+        )
+        export_btn.pack(side="left")
         
         # Contenedor para la lista de tareas
         self.tasks_container = ctk.CTkFrame(
@@ -347,7 +365,7 @@ class MainWindow(ctk.CTk):
         # Botones de paginación
         self.prev_btn = ctk.CTkButton(
             self.pagination_frame,
-            text="⬅️ Anterior",
+            text=" Anterior",
             command=self._prev_page,
             fg_color="transparent",
             hover_color=("gray70", "gray30"),
@@ -363,7 +381,7 @@ class MainWindow(ctk.CTk):
         
         self.next_btn = ctk.CTkButton(
             self.pagination_frame,
-            text="Siguiente ➡️",
+            text="Siguiente ",
             command=self._next_page,
             fg_color="transparent",
             hover_color=("gray70", "gray30")
@@ -447,6 +465,37 @@ class MainWindow(ctk.CTk):
         # Habilitar/deshabilitar botones según la página actual
         self.prev_btn.configure(state="disabled" if self.current_page <= 1 else "normal")
         self.next_btn.configure(state="disabled" if self.current_page >= total_pages else "normal")
+        
+    def _export_to_csv(self):
+        """Exporta las tareas filtradas a un archivo CSV."""
+        try:
+            # Obtener tareas filtradas y ordenadas
+            tasks = self._get_filtered_sorted_tasks()
+            
+            if not tasks:
+                messagebox.showinfo(
+                    "Exportar a CSV",
+                    "No hay tareas para exportar con los filtros actuales.",
+                    parent=self
+                )
+                return
+                
+            # Exportar a CSV
+            filepath = self.export_service.export_to_csv(tasks)
+            
+            # Mostrar mensaje de éxito
+            messagebox.showinfo(
+                "Exportación exitosa",
+                f"Se exportaron {len(tasks)} tareas a:\n{filepath}",
+                parent=self
+            )
+            
+        except Exception as e:
+            messagebox.showerror(
+                "Error al exportar",
+                f"Ocurrió un error al exportar las tareas:\n{str(e)}",
+                parent=self
+            )
     
     def _sort_tasks(self, column: str) -> None:
         """Ordena las tareas por la columna especificada."""
@@ -463,25 +512,20 @@ class MainWindow(ctk.CTk):
         
         # Recargar tareas con el nuevo orden
         self._load_tasks()
-    def _load_tasks(self) -> None:
-        """Carga las tareas desde el servicio y las muestra en la interfaz."""
-        # Limpiar tareas existentes (excepto los encabezados)
-        for widget in self.tasks_container.winfo_children():
-            if widget != self.tasks_container.winfo_children()[0]:  # No eliminar los encabezados
-                widget.destroy()
-        
+    
+    def _get_filtered_sorted_tasks(self):
+        """Obtiene las tareas filtradas y ordenadas según los criterios actuales."""
         # Obtener término de búsqueda
         search_term = self.search_var.get().lower() if hasattr(self, 'search_var') else ""
         
         # Obtener tareas sin ordenar del servicio
         all_tasks = list(self.task_service.tasks.values())  # Obtenemos directamente del diccionario
         
-        # Filtrar por término de búsqueda
+        # Filtrar por término de búsqueda (solo en el nombre de la tarea)
         if search_term:
             all_tasks = [
                 task for task in all_tasks
-                if (search_term in task.name.lower() or
-                    (task.description and search_term in task.description.lower()))
+                if search_term in task.name.lower()
             ]
         
         # Ordenar tareas
@@ -494,10 +538,22 @@ class MainWindow(ctk.CTk):
                 ),
                 reverse=reverse
             )
+            
+        return all_tasks
+    
+    def _load_tasks(self) -> None:
+        """Carga las tareas desde el servicio y las muestra en la interfaz."""
+        # Limpiar tareas existentes (excepto los encabezados)
+        for widget in self.tasks_container.winfo_children():
+            if widget != self.tasks_container.winfo_children()[0]:  # No eliminar los encabezados
+                widget.destroy()
+        
+        # Obtener tareas filtradas y ordenadas
+        all_tasks = self._get_filtered_sorted_tasks()
         
         # Calcular paginación
         total_tasks = len(all_tasks)
-        total_pages = (total_tasks + self.tasks_per_page - 1) // self.tasks_per_page
+        total_pages = max(1, (total_tasks + self.tasks_per_page - 1) // self.tasks_per_page)
         
         # Ajustar la página actual si es necesario
         if total_pages > 0 and self.current_page > total_pages:
@@ -527,8 +583,7 @@ class MainWindow(ctk.CTk):
                 self._create_task_widget(task)
         
         # Actualizar controles de paginación
-        if hasattr(self, 'pagination_frame'):
-            self._update_pagination_controls(total_pages)
+        self._update_pagination_controls(total_pages)
     
     def _create_task_widget(self, task: Task) -> None:
         """Crea un widget para mostrar una tarea en la lista."""
