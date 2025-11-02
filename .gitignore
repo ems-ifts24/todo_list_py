@@ -209,3 +209,6 @@ __marimo__/
 # Ignore data and exports directories inside todo_app
 todo_app/data/
 todo_app/exports/
+
+# Ignore data and exports directories inside todo_list_py
+data/
