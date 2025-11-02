@@ -38,8 +38,12 @@ class MainWindow(ctk.CTk):
         self.current_task_id = None  # ID de la tarea actualmente seleccionada
         
         # Variables para el ordenamiento
-        self.current_sort_column = "name"  # Columna por defecto para ordenar
-        self.sort_ascending = True        # Orden ascendente por defecto
+        self.current_sort_column = "priority"  # Columna por defecto para ordenar
+        self.sort_ascending = False        # Orden descendente por defecto
+        
+        # Variables para la paginación
+        self.current_page = 1
+        self.tasks_per_page = 8  # Número de tareas por página
         
         # Crear la interfaz
         self._create_sidebar()
@@ -255,14 +259,61 @@ class MainWindow(ctk.CTk):
         self._create_table_headers()
         
         # Variable para controlar el orden actual
-        self.current_sort_column = "name"  # Columna por defecto para ordenar
-        self.sort_ascending = True        # Orden ascendente por defecto
+        self.current_sort_column = "created_at"  # Columna por defecto para ordenar
+        self.sort_ascending = True               # Orden ascendente por defecto (más antigua a más reciente)
+        
+        # Controles de paginación
+        self.pagination_outer_frame = ctk.CTkFrame(self.main_content, fg_color="transparent")
+        self.pagination_outer_frame.pack(fill="x", pady=(10, 0))
+        
+        # Frame interno para centrar los controles
+        self.pagination_frame = ctk.CTkFrame(self.pagination_outer_frame, fg_color="transparent")
+        self.pagination_frame.pack(expand=True, pady=5)
+        
+        # Botones de paginación
+        self.prev_btn = ctk.CTkButton(
+            self.pagination_frame,
+            text="⬅️ Anterior",
+            command=self._prev_page,
+            fg_color="transparent",
+            hover_color=("gray70", "gray30"),
+            state="disabled"
+        )
+        self.prev_btn.pack(side="left", padx=5)
+        
+        self.page_label = ctk.CTkLabel(
+            self.pagination_frame,
+            text="Página 1"
+        )
+        self.page_label.pack(side="left", padx=5)
+        
+        self.next_btn = ctk.CTkButton(
+            self.pagination_frame,
+            text="Siguiente ➡️",
+            command=self._next_page,
+            fg_color="transparent",
+            hover_color=("gray70", "gray30")
+        )
+        self.next_btn.pack(side="left", padx=5)
         
         # Cargar tareas iniciales
         self._load_tasks()
     
+    def _prev_page(self) -> None:
+        """Navega a la página anterior."""
+        if self.current_page > 1:
+            self.current_page -= 1
+            self._load_tasks()
+    
+    def _next_page(self) -> None:
+        """Navega a la página siguiente."""
+        self.current_page += 1
+        self._load_tasks()
+    
     def _on_search_change(self, *args) -> None:
         """Se ejecuta cuando cambia el texto de búsqueda."""
+        # Volver a la primera página al buscar
+        self.current_page = 1
         self._load_tasks()
     
     def _create_table_headers(self) -> None:
@@ -273,11 +324,11 @@ class MainWindow(ctk.CTk):
         
         # Configuración de las columnas
         columns = [
-            ("name", "Nombre", 4),      # Nombre - 40% del ancho
-            ("priority", "Prioridad", 2),  # Prioridad - 20% del ancho
-            ("status", "Estado", 2),    # Estado - 20% del ancho
-            ("created_at", "Fecha", 2),  # Fecha - 15% del ancho
-            ("actions", "Acciones", 2)   # Acciones - 5% del ancho
+            ("name", "Nombre", 4),         # Nombre - 40% del ancho
+            ("priority", "Prioridad", 2),   # Prioridad - 20% del ancho
+            ("status", "Estado", 2),        # Estado - 20% del ancho
+            ("created_at", "Fecha de creación", 2),  # Fecha de creación - 15% del ancho
+            ("actions", "Acciones", 2)      # Acciones - 5% del ancho
         ]
         
         # Crear cada encabezado
@@ -314,55 +365,79 @@ class MainWindow(ctk.CTk):
                 )
                 header.pack(fill="x", expand=True, anchor="w")
     
+    def _update_pagination_controls(self, total_pages: int) -> None:
+        """Actualiza los controles de paginación."""
+        # Actualizar etiqueta de página
+        self.page_label.configure(text=f"Página {self.current_page} de {total_pages if total_pages > 0 else 1}")
+        
+        # Habilitar/deshabilitar botones según la página actual
+        self.prev_btn.configure(state="disabled" if self.current_page <= 1 else "normal")
+        self.next_btn.configure(state="disabled" if self.current_page >= total_pages else "normal")
+    
     def _sort_tasks(self, column: str) -> None:
         """Ordena las tareas por la columna especificada."""
-        # Cambiar el orden si se hace clic en la misma columna
         if self.current_sort_column == column:
+            # Si se hace clic en la misma columna, invertir el orden
             self.sort_ascending = not self.sort_ascending
         else:
+            # Si es una columna diferente, ordenar ascendente por defecto
             self.current_sort_column = column
             self.sort_ascending = True
         
-        # Recargar las tareas con el nuevo orden
+        # Volver a la primera página al cambiar el orden
+        self.current_page = 1
+        
+        # Recargar tareas con el nuevo orden
         self._load_tasks()
-    
     def _load_tasks(self) -> None:
         """Carga las tareas desde el servicio y las muestra en la interfaz."""
-        # Limpiar tareas actuales (incluyendo los encabezados)
-        if not hasattr(self, 'tasks_container'):
-            return
-            
-        # Eliminar todos los widgets del contenedor
+        # Limpiar tareas existentes (excepto los encabezados)
         for widget in self.tasks_container.winfo_children():
-            widget.destroy()
-        
-        # Volver a crear los encabezados
-        self._create_table_headers()
+            if widget != self.tasks_container.winfo_children()[0]:  # No eliminar los encabezados
+                widget.destroy()
         
         # Obtener término de búsqueda
-        search_term = self.search_var.get().strip() if hasattr(self, 'search_var') else ""
+        search_term = self.search_var.get().lower() if hasattr(self, 'search_var') else ""
         
-        # Obtener tareas (filtradas si hay término de búsqueda)
+        # Obtener tareas sin ordenar del servicio
+        all_tasks = list(self.task_service.tasks.values())  # Obtenemos directamente del diccionario
+        
+        # Filtrar por término de búsqueda
         if search_term:
-            tasks = self.task_service.search_tasks(search_term)
-        else:
-            tasks = self.task_service.get_all_tasks()
+            all_tasks = [
+                task for task in all_tasks
+                if (search_term in task.name.lower() or
+                    (task.description and search_term in task.description.lower()))
+            ]
         
-        # Ordenar tareas según la columna seleccionada
-        if tasks and self.current_sort_column:
-            reverse_sort = not self.sort_ascending
-            
-            if self.current_sort_column == "name":
-                tasks.sort(key=lambda t: t.name.lower(), reverse=reverse_sort)
-            elif self.current_sort_column == "priority":
-                tasks.sort(key=lambda t: (t.priority.value if t.priority else ""), reverse=reverse_sort)
-            elif self.current_sort_column == "status":
-                tasks.sort(key=lambda t: (t.status.value if t.status else ""), reverse=reverse_sort)
-            elif self.current_sort_column == "created_at" and hasattr(tasks[0], 'created_at'):
-                tasks.sort(key=lambda t: t.created_at if hasattr(t, 'created_at') else "", reverse=reverse_sort)
+        # Ordenar tareas
+        if self.current_sort_column:
+            reverse = not self.sort_ascending
+            all_tasks.sort(
+                key=lambda x: (
+                    str(getattr(x, self.current_sort_column, "") or ""),
+                    x.name  # Segundo criterio de ordenación
+                ),
+                reverse=reverse
+            )
+        
+        # Calcular paginación
+        total_tasks = len(all_tasks)
+        total_pages = (total_tasks + self.tasks_per_page - 1) // self.tasks_per_page
+        
+        # Ajustar la página actual si es necesario
+        if total_pages > 0 and self.current_page > total_pages:
+            self.current_page = total_pages
+        elif self.current_page < 1:
+            self.current_page = 1
+        
+        # Obtener tareas para la página actual
+        start_idx = (self.current_page - 1) * self.tasks_per_page
+        end_idx = min(start_idx + self.tasks_per_page, len(all_tasks))
+        tasks_to_show = all_tasks[start_idx:end_idx]
         
         # Mostrar mensaje si no hay tareas
-        if not tasks:
+        if not tasks_to_show:
             no_tasks_frame = ctk.CTkFrame(self.tasks_container, fg_color="transparent")
             no_tasks_frame.pack(fill="x", pady=10)
             
@@ -372,11 +447,14 @@ class MainWindow(ctk.CTk):
                 font=ctk.CTkFont(size=14, slant="italic")
             )
             no_tasks_label.pack(pady=20)
-            return
+        else:
+            # Mostrar tareas de la página actual
+            for task in tasks_to_show:
+                self._create_task_widget(task)
         
-        # Mostrar cada tarea
-        for task in tasks:
-            self._create_task_widget(task)
+        # Actualizar controles de paginación
+        if hasattr(self, 'pagination_frame'):
+            self._update_pagination_controls(total_pages)
     
     def _create_task_widget(self, task: Task) -> None:
         """Crea un widget para mostrar una tarea en la lista."""
@@ -433,8 +511,22 @@ class MainWindow(ctk.CTk):
         )
         status_label.grid(row=0, column=2, padx=5, pady=5)
         
-        # Fecha
-        date_str = task.created_at.strftime("%d/%m/%Y") if hasattr(task, 'created_at') and task.created_at else ""
+        # Fecha y hora de creación
+        if hasattr(task, 'created_at') and task.created_at:
+            if isinstance(task.created_at, str):
+                # Si created_at es un string, intentar convertirlo a datetime
+                try:
+                    from datetime import datetime
+                    created_dt = datetime.fromisoformat(task.created_at.replace('Z', '+00:00'))
+                    date_str = created_dt.strftime("%d/%m/%Y %H:%M")
+                except (ValueError, AttributeError):
+                    date_str = task.created_at
+            else:
+                # Si ya es un objeto datetime
+                date_str = task.created_at.strftime("%d/%m/%Y %H:%M")
+        else:
+            date_str = ""
+            
         date_label = ctk.CTkLabel(task_frame, text=date_str)
         date_label.grid(row=0, column=3, padx=5, pady=5)
         
