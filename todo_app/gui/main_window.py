@@ -19,8 +19,21 @@ class MainWindow(ctk.CTk):
         
         # Configuración de la ventana
         self.title("Gestor de Tareas")
-        self.geometry("1000x700")
-        self.minsize(800, 600)
+        self.minsize(800, 600)    # Tamaño mínimo permitido
+        
+        # Tamaño deseado de la ventana
+        self.width = 1100
+        self.height = 600
+        
+        # Mostrar dimensiones al redimensionar
+        self.bind("<Configure>", self._on_window_resize)
+        
+        # Configurar geometría inicial con el tamaño correcto
+        # La posición se establecerá en _center_window
+        self.geometry(f"{self.width}x{self.height}+0+0")
+        
+        # Centrar la ventana después de que esté completamente creada
+        self.after(100, self._center_window)
         
         # Configurar tema por defecto
         ctk.set_appearance_mode("dark")
@@ -55,11 +68,56 @@ class MainWindow(ctk.CTk):
         # Mostrar la vista de tareas por defecto
         self.show_view(self.current_view)
     
+    def _center_window(self):
+        """Centra la ventana en la pantalla."""
+        # Asegurar que la ventana tenga el tamaño correcto
+        self.geometry(f"{self.width}x{self.height}")
+        
+        # Actualizar la ventana para asegurar que los cálculos sean precisos
+        self.update_idletasks()
+        
+        # Obtener dimensiones de la pantalla
+        screen_width = self.winfo_screenwidth()
+        screen_height = self.winfo_screenheight()
+        
+        # Calcular posición x, y para centrar la ventana
+        x = (screen_width // 2) - (self.width // 2)
+        y = max(30, (screen_height // 2) - (self.height // 2))  # Mínimo 30 píxeles desde el borde superior
+        
+        # Aplicar la posición centrada
+        self.geometry(f"{self.width}x{self.height}+{x}+{y}")
+        self.minsize(800, 600)  # Asegurar tamaño mínimo
+        
+    def _on_window_resize(self, event):
+        """Muestra las dimensiones actuales de la ventana en la barra de título."""
+        # Comentado temporalmente para ocultar la resolución
+        # if self.winfo_toplevel() == self:  # Solo si es la ventana principal
+        #     width = self.winfo_width()
+        #     height = self.winfo_height()
+        #     self.title(f"Gestor de Tareas - {width}x{height}")
+    
+    def _setup_window_resize_handler(self, window, base_title):
+        """Configura el manejador de redimensionamiento para una ventana."""
+        # Comentado temporalmente para ocultar la resolución
+        # def on_resize(event):
+        #     width = window.winfo_width()
+        #     height = window.winfo_height()
+        #     window.title(f"{base_title} - {width}x{height}")
+        # 
+        # window.bind("<Configure>", on_resize)
+        # # Actualizar título con tamaño inicial
+        # window.update_idletasks()
+        # window.title(f"{base_title} - {window.winfo_width()}x{window.winfo_height()}")
+        window.title(base_title)  # Solo mostramos el título base
+    
     def _confirm_delete_task(self, task: Task) -> None:
         """Muestra un diálogo de confirmación para eliminar una tarea."""
         dialog = ctk.CTkToplevel(self)
         dialog.title("Confirmar Eliminación")
-        dialog.geometry("400x200")
+        dialog.resizable(True, True)  # Hacer redimensionable
+        dialog.minsize(450, 200)  # Tamaño mínimo
+        dialog.geometry("550x220")  # Tamaño inicial
+        self._setup_window_resize_handler(dialog, "Confirmar Eliminación")
         dialog.grab_set()  # Hace que el diálogo sea modal
         
         # Centrar el diálogo en la pantalla
@@ -137,7 +195,7 @@ class MainWindow(ctk.CTk):
                 text_color=("gray10", "gray90"),
                 hover_color=("gray70", "gray30")
             )
-    
+            
     def show_view(self, view_name: str) -> None:
         """Muestra la vista especificada."""
         self.current_view = view_name
@@ -146,8 +204,12 @@ class MainWindow(ctk.CTk):
         for widget in self.main_content.winfo_children():
             widget.destroy()
         
-        # Actualizar estilos de los botones de navegación
-        self._setup_styles()
+        # Actualizar estado de los botones de navegación
+        for name, btn in self.nav_buttons.items():
+            if name == view_name:
+                btn.configure(fg_color=("gray75", "gray25"))
+            else:
+                btn.configure(fg_color="transparent")
         
         # Mostrar la vista correspondiente
         if view_name == "tasks":
@@ -458,6 +520,9 @@ class MainWindow(ctk.CTk):
     
     def _create_task_widget(self, task: Task) -> None:
         """Crea un widget para mostrar una tarea en la lista."""
+        # Determinar si la tarea está completada (se usa en varios lugares)
+        is_completed = task.status == Status.COMPLETED
+        
         # Frame principal de la tarea
         task_frame = ctk.CTkFrame(self.tasks_container, fg_color=("#f0f0f0", "#2b2b2b"))
         task_frame.pack(fill="x", pady=2, padx=5)
@@ -546,6 +611,44 @@ class MainWindow(ctk.CTk):
             command=lambda t=task: self._show_edit_task_dialog(t) if task.status != Status.COMPLETED else None,
             state="normal" if task.status != Status.COMPLETED else "disabled"
         )
+        # Añadir tooltip manual
+        def show_edit_tooltip(event, text="Editar tarea"):
+            # Primero ocultar cualquier tooltip existente
+            if hasattr(edit_btn, 'tooltip'):
+                edit_btn.tooltip.destroy()
+                
+            x, y, _, _ = edit_btn.bbox("insert")
+            x += edit_btn.winfo_rootx() + 25
+            y += edit_btn.winfo_rooty() + 25
+            
+            tooltip = ctk.CTkToplevel(edit_btn)
+            tooltip.wm_overrideredirect(True)
+            tooltip.wm_geometry(f"+{x}+{y}")
+            
+            label = ctk.CTkLabel(
+                tooltip,
+                text=text,
+                font=ctk.CTkFont(size=12),
+                corner_radius=6,
+                fg_color=("gray70", "gray30"),
+                text_color=("black", "white"),
+                padx=10,
+                pady=5
+            )
+            label.pack()
+            tooltip.label = label
+            edit_btn.tooltip = tooltip
+            
+            # Programar la eliminación del tooltip después de 750 milisegundos
+            tooltip.after(750, lambda t=tooltip: t.destroy() if t.winfo_exists() else None)
+        
+        def hide_tooltip(event):
+            if hasattr(edit_btn, 'tooltip'):
+                edit_btn.tooltip.destroy()
+                delattr(edit_btn, 'tooltip')
+        
+        edit_btn.bind("<Enter>", lambda e: show_edit_tooltip(e, "Editar tarea" if not is_completed else "No se puede editar una tarea completada"))
+        edit_btn.bind("<Leave>", hide_tooltip)
         edit_btn.pack(side="left", padx=2)
         
         # Botón de eliminar
@@ -560,153 +663,203 @@ class MainWindow(ctk.CTk):
             command=lambda t=task: self._confirm_delete_task(t) if task.status != Status.COMPLETED else None,
             state="normal" if task.status != Status.COMPLETED else "disabled"
         )
+        # Añadir tooltip manual
+        def show_delete_tooltip(event, text="Eliminar tarea"):
+            # Primero ocultar cualquier tooltip existente
+            if hasattr(delete_btn, 'tooltip'):
+                delete_btn.tooltip.destroy()
+                
+            x, y, _, _ = delete_btn.bbox("insert")
+            x += delete_btn.winfo_rootx() + 25
+            y += delete_btn.winfo_rooty() + 25
+            
+            tooltip = ctk.CTkToplevel(delete_btn)
+            tooltip.wm_overrideredirect(True)
+            tooltip.wm_geometry(f"+{x}+{y}")
+            
+            label = ctk.CTkLabel(
+                tooltip,
+                text=text,
+                font=ctk.CTkFont(size=12),
+                corner_radius=6,
+                fg_color=("gray70", "gray30"),
+                text_color=("black", "white"),
+                padx=10,
+                pady=5
+            )
+            label.pack()
+            tooltip.label = label
+            delete_btn.tooltip = tooltip
+            
+            # Programar la eliminación del tooltip después de 750 milisegundos
+            tooltip.after(750, lambda t=tooltip: t.destroy() if t.winfo_exists() else None)
+        
+        def hide_delete_tooltip(event):
+            if hasattr(delete_btn, 'tooltip'):
+                delete_btn.tooltip.destroy()
+                delattr(delete_btn, 'tooltip')
+        
+        delete_btn.bind("<Enter>", lambda e: show_delete_tooltip(e, "Eliminar tarea" if not is_completed else "No se puede eliminar una tarea completada"))
+        delete_btn.bind("<Leave>", hide_delete_tooltip)
         delete_btn.pack(side="left", padx=2)
         
-        # Botón de completar/reabrir
-        complete_text = "✓" if task.status != Status.COMPLETED else "↩"
+        # Función para manejar el clic en el botón de completar
+        def on_complete_click():
+            if not is_completed:
+                self._confirm_complete_task(task)
+        
+        # Función para mostrar tooltip de completar tarea
+        def show_complete_tooltip(event, text):
+            # Primero ocultar cualquier tooltip existente
+            if hasattr(complete_btn, 'tooltip') and complete_btn.tooltip.winfo_exists():
+                complete_btn.tooltip.destroy()
+                
+            x, y, _, _ = complete_btn.bbox("insert")
+            x += complete_btn.winfo_rootx() + 25
+            y += complete_btn.winfo_rooty() + 25
+            
+            tooltip = ctk.CTkToplevel(complete_btn)
+            tooltip.wm_overrideredirect(True)
+            tooltip.wm_geometry(f"+{x}+{y}")
+            
+            label = ctk.CTkLabel(
+                tooltip,
+                text=text,
+                font=ctk.CTkFont(size=12),
+                corner_radius=6,
+                fg_color=("gray70", "gray30"),
+                text_color=("black", "white"),
+                padx=10,
+                pady=5
+            )
+            label.pack()
+            tooltip.label = label
+            complete_btn.tooltip = tooltip
+            
+            # Programar la eliminación del tooltip después de 750 milisegundos
+            tooltip.after(750, lambda t=tooltip: t.destroy() if t.winfo_exists() else None)
+        
+        def hide_complete_tooltip(event=None):
+            if hasattr(complete_btn, 'tooltip') and complete_btn.tooltip.winfo_exists():
+                complete_btn.tooltip.destroy()
+                delattr(complete_btn, 'tooltip')
+        
+        # Botón de completar tarea (solo visible si no está completada)
         complete_btn = ctk.CTkButton(
             actions_frame,
-            text=complete_text,
+            text="✓",
             width=30,
             height=30,
-            fg_color=("#2ecc71", "#27ae60") if task.status != Status.COMPLETED else ("#95a5a6", "#7f8c8d"),
-            hover_color=("#27ae60", "#219653") if task.status != Status.COMPLETED else None,
+            fg_color=("#2ecc71", "#27ae60") if not is_completed else ("#95a5a6", "#7f8c8d"),
+            hover_color=("#27ae60", "#219653") if not is_completed else ("#95a5a6", "#7f8c8d"),
             text_color=("white", "white"),
-            command=lambda t=task: self._complete_task(t) if task.status != Status.COMPLETED else self._reopen_task(t)
+            command=on_complete_click
         )
+        
+        if is_completed:
+            complete_btn.configure(state="disabled")
+        
+        # Configurar eventos del tooltip
+        tooltip_text = "Tarea completada" if is_completed else "Marcar como completada"
+        complete_btn.bind("<Enter>", lambda e, t=tooltip_text: show_complete_tooltip(e, t))
+        complete_btn.bind("<Leave>", hide_complete_tooltip)
+        complete_btn.bind("<Button-1>", hide_complete_tooltip)
         complete_btn.pack(side="left", padx=2)
     
-    def _complete_task(self, task: Task) -> None:
+    def _confirm_complete_task(self, task: Task) -> None:
+        """Muestra un diálogo de confirmación antes de marcar una tarea como completada."""
+        # Crear diálogo
+        dialog = ctk.CTkToplevel(self)
+        dialog.title("Confirmar Finalización")
+        dialog.resizable(True, True)  # Hacer redimensionable
+        dialog.minsize(450, 200)  # Tamaño mínimo
+        dialog.geometry("550x220")  # Tamaño inicial
+        self._setup_window_resize_handler(dialog, "Confirmar Finalización")
+        
+        # Hacer que el diálogo sea modal
+        dialog.transient(self)
+        dialog.grab_set()
+        
+        # Configurar comportamiento al cerrar
+        dialog.protocol("WM_DELETE_WINDOW", dialog.destroy)
+        
+        # Frame principal con padding
+        main_frame = ctk.CTkFrame(dialog, corner_radius=10)
+        main_frame.pack(padx=20, pady=20, fill="both", expand=True)
+        
+        # Mensaje de confirmación
+        msg = f"¿Estás seguro de que deseas marcar la tarea como completada?\n\n{task.name}"
+        label = ctk.CTkLabel(
+            main_frame,
+            text=msg,
+            font=ctk.CTkFont(size=14, weight="bold"),
+            wraplength=400,
+            justify="center"
+        )
+        label.pack(pady=(20, 30), padx=20)
+        
+        # Frame para los botones
+        button_frame = ctk.CTkFrame(main_frame, fg_color="transparent")
+        button_frame.pack(fill="x", padx=20, pady=(0, 10))
+        
+        # Botón de confirmar
+        confirm_btn = ctk.CTkButton(
+            button_frame,
+            text="Sí, marcar como completada",
+            fg_color=("#2ecc71", "#27ae60"),
+            hover_color=("#27ae60", "#219653"),
+            command=lambda: self._complete_task(dialog, task),
+            height=40,
+            font=ctk.CTkFont(weight="bold")
+        )
+        confirm_btn.pack(side="left", expand=True, fill="x", padx=5)
+        
+        # Botón de cancelar
+        cancel_btn = ctk.CTkButton(
+            button_frame,
+            text="Cancelar",
+            fg_color=("#95a5a6", "#7f8c8d"),
+            hover_color=("#7f8c8d", "#6c7a7a"),
+            command=dialog.destroy,
+            height=40,
+            font=ctk.CTkFont(weight="bold")
+        )
+        cancel_btn.pack(side="right", expand=True, fill="x", padx=5)
+        
+        # Ajustar tamaño automáticamente
+        dialog.update_idletasks()
+        
+        # Centrar el diálogo en la pantalla
+        screen_width = self.winfo_screenwidth()
+        screen_height = self.winfo_screenheight()
+        
+        # Obtener el tamaño del diálogo
+        dialog.update_idletasks()
+        width = dialog.winfo_width()
+        height = dialog.winfo_height()
+        
+        # Calcular posición
+        x = (screen_width // 2) - (width // 2)
+        y = (screen_height // 2) - (height // 2)
+        
+        # Aplicar geometría
+        dialog.geometry(f"{width}x{height}+{x}+{y}")
+        
+        # Forzar el foco
+        dialog.focus_force()
+    
+    def _complete_task(self, dialog, task: Task) -> None:
         """Marca una tarea como completada."""
         try:
             self.task_service.update_task(
                 task_id=task.id,
                 status=Status.COMPLETED
             )
+            dialog.destroy()  # Cerrar el diálogo
             self._load_tasks()  # Recargar la lista de tareas
         except Exception as e:
-            print(f"Error al completar la tarea: {e}")
-    
-    def _reopen_task(self, task: Task) -> None:
-        """Vuelve a abrir una tarea completada."""
-        try:
-            self.task_service.update_task(
-                task_id=task.id,
-                status=Status.PENDING
-            )
-            self._load_tasks()  # Recargar la lista de tareas
-        except Exception as e:
-            print(f"Error al reabrir la tarea: {e}")
-
-    def _show_edit_task_dialog(self, task: Task) -> None:
-        """Muestra el diálogo para editar una tarea existente."""
-        dialog = ctk.CTkToplevel(self)
-        dialog.title(f"Editar Tarea: {task.name}")
-        dialog.geometry("500x300")
-        dialog.grab_set()  # Hace que el diálogo sea modal
-            
-        # Centrar el diálogo en la pantalla
-        dialog.update_idletasks()
-        width = dialog.winfo_width()
-        height = dialog.winfo_height()
-        x = (dialog.winfo_screenwidth() // 2) - (width // 2)
-        y = (dialog.winfo_screenheight() // 2) - (height // 2)
-        dialog.geometry(f'{width}x{height}+{x}+{y}')
-            
-        # Título
-        ctk.CTkLabel(
-            dialog,
-            text=f"Editar Tarea: {task.name}",
-            font=ctk.CTkFont(size=20, weight="bold")
-        ).pack(pady=10)
-            
-        # Formulario
-        form_frame = ctk.CTkFrame(dialog, fg_color="transparent")
-        form_frame.pack(padx=20, pady=10, fill="both", expand=True)
-            
-        # Campo de nombre
-        ctk.CTkLabel(form_frame, text="Nombre:", anchor="w").pack(fill="x", pady=(5, 0))
-        name_entry = ctk.CTkEntry(form_frame, placeholder_text="Descripción de la tarea")
-        name_entry.insert(0, task.name)
-        name_entry.pack(fill="x", pady=(0, 10))
-            
-        # Prioridad
-        ctk.CTkLabel(form_frame, text="Prioridad:", anchor="w").pack(fill="x", pady=(5, 0))
-        priority_var = ctk.StringVar(value=task.priority.value)
-        priority_menu = ctk.CTkOptionMenu(
-            form_frame,
-            values=[p.value for p in Priority],
-            variable=priority_var,
-            fg_color=("gray70", "gray30"),
-            button_color=("gray60", "gray40"),
-            button_hover_color=("gray50", "gray50")
-        )
-        priority_menu.pack(fill="x", pady=(0, 10))
-            
-        # Estado
-        ctk.CTkLabel(form_frame, text="Estado:", anchor="w").pack(fill="x", pady=(5, 0))
-        status_var = ctk.StringVar(value=task.status.value)
-        status_menu = ctk.CTkOptionMenu(
-            form_frame,
-            values=[s.value for s in Status],
-            variable=status_var,
-            fg_color=("gray70", "gray30"),
-            button_color=("gray60", "gray40"),
-            button_hover_color=("gray50", "gray50")
-        )
-        status_menu.pack(fill="x", pady=(0, 20))
-            
-        # Botones
-        buttons_frame = ctk.CTkFrame(dialog, fg_color="transparent")
-        buttons_frame.pack(pady=10)
-            
-        def save_changes():
-            try:
-                name = name_entry.get().strip()
-                if not name:
-                    raise ValueError("El nombre de la tarea no puede estar vacío")
-                    
-                priority = Priority(priority_var.get())
-                status = Status(status_var.get())
-                    
-                # Actualizar la tarea
-                self.task_service.update_task(
-                    task_id=task.id,
-                    name=name,
-                    priority=priority,
-                    status=status
-                )
-                    
-                # Actualizar la lista de tareas
-                self._load_tasks()
-                dialog.destroy()
-                    
-            except Exception as e:
-                # Mostrar mensaje de error
-                error_label = ctk.CTkLabel(
-                    form_frame,
-                    text=str(e),
-                    text_color="red"
-                )
-                error_label.pack(pady=5)
-
-        # Botón de guardar
-        ctk.CTkButton(
-            buttons_frame,
-            text="Guardar Cambios",
-            command=save_changes,
-            fg_color=("#2ecc71", "#27ae60"),
-            hover_color=("#27ae60", "#219653")
-        ).pack(side="left", padx=5)
-        
-        # Botón de cancelar
-        ctk.CTkButton(
-            buttons_frame,
-            text="Cancelar",
-            command=dialog.destroy,
-            fg_color=("gray70", "gray30"),
-            hover_color=("gray60", "gray40")
-        ).pack(side="left", padx=5)
+            print(f"Error al marcar la tarea como completada: {e}")
+            dialog.destroy()  # Cerrar el diálogo en caso de error
     
     def _create_sidebar(self) -> None:
         """Crea la barra lateral de navegación."""
@@ -863,7 +1016,10 @@ class MainWindow(ctk.CTk):
         """Muestra el diálogo para editar una tarea existente."""
         dialog = ctk.CTkToplevel(self)
         dialog.title(f"Editar Tarea: {task.name}")
-        dialog.geometry("500x300")
+        dialog.resizable(True, True)  # Hacer redimensionable
+        dialog.geometry("600x600")  # Tamaño inicial más compacto
+        dialog.minsize(450, 350)  # Tamaño mínimo más pequeño
+        self._setup_window_resize_handler(dialog, f"Editar Tarea: {task.name}")
         dialog.grab_set()  # Hace que el diálogo sea modal
         
         # Centrar el diálogo en la pantalla
@@ -973,115 +1129,10 @@ class MainWindow(ctk.CTk):
         """Muestra el diálogo para crear una nueva tarea."""
         dialog = ctk.CTkToplevel(self)
         dialog.title("Nueva Tarea")
-        dialog.geometry("500x300")
-        dialog.grab_set()  # Hace que el diálogo sea modal
-        
-        # Centrar el diálogo en la pantalla
-        dialog.update_idletasks()
-        width = dialog.winfo_width()
-        height = dialog.winfo_height()
-        x = (dialog.winfo_screenwidth() // 2) - (width // 2)
-        y = (dialog.winfo_screenheight() // 2) - (height // 2)
-        dialog.geometry(f'{width}x{height}+{x}+{y}')
-        
-        # Título
-        ctk.CTkLabel(
-            dialog,
-            text="Nueva Tarea",
-            font=ctk.CTkFont(size=20, weight="bold")
-        ).pack(pady=10)
-        
-        # Formulario
-        form_frame = ctk.CTkFrame(dialog, fg_color="transparent")
-        form_frame.pack(padx=20, pady=10, fill="both", expand=True)
-        
-        # Campo de nombre
-        ctk.CTkLabel(form_frame, text="Nombre:", anchor="w").pack(fill="x", pady=(5, 0))
-        name_entry = ctk.CTkEntry(form_frame, placeholder_text="Descripción de la tarea")
-        name_entry.pack(fill="x", pady=(0, 10))
-        
-        # Prioridad
-        ctk.CTkLabel(form_frame, text="Prioridad:", anchor="w").pack(fill="x", pady=(5, 0))
-        priority_var = ctk.StringVar(value=Priority.MEDIUM.value)
-        priority_menu = ctk.CTkOptionMenu(
-            form_frame,
-            values=[p.value for p in Priority],
-            variable=priority_var,
-            fg_color=("gray70", "gray30"),
-            button_color=("gray60", "gray40"),
-            button_hover_color=("gray50", "gray50")
-        )
-        priority_menu.pack(fill="x", pady=(0, 10))
-        
-        # Estado
-        ctk.CTkLabel(form_frame, text="Estado:", anchor="w").pack(fill="x", pady=(5, 0))
-        status_var = ctk.StringVar(value=Status.PENDING.value)
-        status_menu = ctk.CTkOptionMenu(
-            form_frame,
-            values=[s.value for s in Status],
-            variable=status_var,
-            fg_color=("gray70", "gray30"),
-            button_color=("gray60", "gray40"),
-            button_hover_color=("gray50", "gray50")
-        )
-        status_menu.pack(fill="x", pady=(0, 20))
-        
-        # Botones
-        buttons_frame = ctk.CTkFrame(dialog, fg_color="transparent")
-        buttons_frame.pack(pady=10)
-        
-        def save_task():
-            try:
-                name = name_entry.get().strip()
-                if not name:
-                    raise ValueError("El nombre de la tarea no puede estar vacío")
-                
-                priority = Priority(priority_var.get())
-                status = Status(status_var.get())
-                
-                # Crear la tarea
-                self.task_service.create_task(
-                    name=name,
-                    priority=priority,
-                    status=status
-                )
-                
-                # Actualizar la lista de tareas
-                self._load_tasks()
-                dialog.destroy()
-                
-            except Exception as e:
-                # Mostrar mensaje de error
-                error_label = ctk.CTkLabel(
-                    form_frame,
-                    text=str(e),
-                    text_color="red"
-                )
-                error_label.pack(pady=5)
-                self.after(3000, error_label.destroy)
-        
-        ctk.CTkButton(
-            buttons_frame,
-            text="Guardar",
-            command=save_task
-        ).pack(side="left", padx=5)
-        
-        ctk.CTkButton(
-            buttons_frame,
-            text="Cancelar",
-            fg_color=("gray70", "gray30"),
-            hover_color=("gray60", "gray40"),
-            command=dialog.destroy
-        ).pack(side="left", padx=5)
-        
-        # Enfocar el campo de nombre
-        name_entry.focus_set()
-    
-    def _show_new_task_dialog(self) -> None:
-        """Muestra el diálogo para crear una nueva tarea."""
-        dialog = ctk.CTkToplevel(self)
-        dialog.title("Nueva Tarea")
-        dialog.geometry("500x300")
+        dialog.resizable(True, True)
+        dialog.minsize(550, 500)  # Tamaño mínimo más pequeño
+        dialog.geometry("600x600")  # Tamaño inicial más compacto
+        self._setup_window_resize_handler(dialog, "Nueva Tarea")
         dialog.grab_set()  # Hace que el diálogo sea modal
         
         # Centrar el diálogo en la pantalla
