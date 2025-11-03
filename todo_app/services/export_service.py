@@ -37,11 +37,12 @@ class ExportService:
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         return f"{timestamp}_lista_tareas.{extension}"
     
-    def export_to_csv(self, tasks: List[Task]) -> str:
+    def export_to_csv(self, tasks: List[Task], filepath: str = None) -> str:
         """Exporta las tareas a un archivo CSV.
         
         Args:
             tasks: Lista de tareas a exportar
+            filepath: Ruta personalizada donde guardar el archivo. Si es None, se genera una automáticamente.
             
         Returns:
             Ruta al archivo CSV generado
@@ -55,12 +56,17 @@ class ExportService:
         # Definir encabezados y mapeo de campos del CSV
         fieldnames = ["ID", "NOMBRE", "PRIORIDAD", "ESTADO", "FECHA_CREACION", "ULTIMA_MODIFICACION"]
         
-        # Generar nombre de archivo de salida
-        filename = self._generate_export_filename("csv")
-        filepath = self.export_dir / filename
+        # Usar la ruta proporcionada o generar una automática
+        if filepath is None:
+            filename = self._generate_export_filename("csv")
+            filepath = str(self.export_dir / filename)
+        
+        # Asegurarse de que el directorio existe
+        output_path = Path(filepath)
+        output_path.parent.mkdir(parents=True, exist_ok=True)
         
         try:
-            with open(filepath, 'w', newline='', encoding='utf-8') as csvfile:
+            with open(output_path, 'w', newline='', encoding='utf-8') as csvfile:
                 writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
                 writer.writeheader()
                 
@@ -74,7 +80,7 @@ class ExportService:
                         "ULTIMA_MODIFICACION": task.updated_at.isoformat()
                     })
             
-            return str(filepath.absolute())
+            return str(output_path.absolute())
             
         except IOError as e:
             error_msg = f"Error al exportar a CSV: {str(e)}"

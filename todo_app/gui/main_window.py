@@ -4,7 +4,7 @@ Ventana principal de la aplicación de tareas.
 import customtkinter as ctk
 from typing import Dict, Callable, Any, Optional, List
 import tkinter as tk
-from tkinter import messagebox
+from tkinter import messagebox, ttk, Toplevel, StringVar, BooleanVar, filedialog
 from datetime import datetime, timedelta
 import os
 import re
@@ -929,11 +929,12 @@ class MainWindow(ctk.CTk):
         
         # Configuración de las columnas
         columns = [
-            ("name", "Nombre", 4),         # Nombre - 40% del ancho
-            ("priority", "Prioridad", 2),   # Prioridad - 20% del ancho
-            ("status", "Estado", 2),        # Estado - 20% del ancho
-            ("created_at", "Fecha de creación", 2),  # Fecha de creación - 15% del ancho
-            ("actions", "Acciones", 2)      # Acciones - 5% del ancho
+            ("name", "Tarea", 6),               # Nombre - 50% del ancho
+            ("priority", "Prioridad", 1),       # Prioridad - 10% del ancho
+            ("status", "Estado", 2),            # Estado - 15% del ancho
+            ("created_at", "Creada", 2),        # Fecha de creación - 15% del ancho
+            ("updated_at", "Actualizada", 2),    # Fecha de actualización - 15% del ancho
+            ("actions", "Acciones", 1)          # Acciones - 5% del ancho
         ]
         
         # Crear cada encabezado
@@ -980,7 +981,7 @@ class MainWindow(ctk.CTk):
         self.next_btn.configure(state="disabled" if self.current_page >= total_pages else "normal")
         
     def _export_to_csv(self):
-        """Exporta las tareas filtradas a un archivo CSV."""
+        """Exporta las tareas filtradas a un archivo CSV permitiendo elegir la ubicación de guardado."""
         try:
             # Obtener tareas filtradas y ordenadas
             tasks = self._get_filtered_sorted_tasks()
@@ -992,9 +993,29 @@ class MainWindow(ctk.CTk):
                     parent=self
                 )
                 return
+            
+            # Mostrar diálogo para seleccionar ubicación de guardado
+            import os
+            from tkinter import filedialog
+            
+            # Obtener la ruta del escritorio por defecto
+            default_dir = os.path.join(os.path.expanduser('~'), 'Desktop')
+            default_filename = f"tareas_exportadas_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"
+            
+            filepath = filedialog.asksaveasfilename(
+                defaultextension=".csv",
+                filetypes=[("Archivos CSV", "*.csv"), ("Todos los archivos", "*.*")],
+                initialdir=default_dir,
+                initialfile=default_filename,
+                title="Guardar archivo CSV como..."
+            )
+            
+            # Si el usuario cancela el diálogo
+            if not filepath:
+                return
                 
-            # Exportar a CSV
-            filepath = self.export_service.export_to_csv(tasks)
+            # Exportar a CSV en la ubicación seleccionada
+            self.export_service.export_to_csv(tasks, filepath)
             
             # Mostrar mensaje de éxito
             messagebox.showinfo(
@@ -1118,11 +1139,12 @@ class MainWindow(ctk.CTk):
         
         # Configuración de las columnas (debe coincidir con los encabezados)
         columns = [
-            ("name", 4),      # Nombre - 40% del ancho
-            ("priority", 2),  # Prioridad - 20% del ancho
-            ("status", 2),    # Estado - 20% del ancho
-            ("created_at", 2), # Fecha - 15% del ancho
-            ("actions", 2)     # Acciones - 5% del ancho
+            ("name", 6),          # Nombre - 50% del ancho
+            ("priority", 1),      # Prioridad - 10% del ancho
+            ("status", 2),        # Estado - 15% del ancho
+            ("created_at", 2),    # Fecha de creación - 15% del ancho
+            ("updated_at", 2),    # Fecha de actualización - 15% del ancho
+            ("actions", 1)        # Acciones - 5% del ancho
         ]
         
         # Configurar el grid para los elementos de la tarea
@@ -1166,27 +1188,29 @@ class MainWindow(ctk.CTk):
         status_label.grid(row=0, column=2, padx=5, pady=5)
         
         # Fecha y hora de creación
-        if hasattr(task, 'created_at') and task.created_at:
-            if isinstance(task.created_at, str):
-                # Si created_at es un string, intentar convertirlo a datetime
+        def format_datetime(dt):
+            if not dt:
+                return ""
+            if isinstance(dt, str):
                 try:
                     from datetime import datetime
-                    created_dt = datetime.fromisoformat(task.created_at.replace('Z', '+00:00'))
-                    date_str = created_dt.strftime("%d/%m/%Y %H:%M")
+                    dt = datetime.fromisoformat(dt.replace('Z', '+00:00'))
                 except (ValueError, AttributeError):
-                    date_str = task.created_at
-            else:
-                # Si ya es un objeto datetime
-                date_str = task.created_at.strftime("%d/%m/%Y %H:%M")
-        else:
-            date_str = ""
+                    return dt
+            return dt.strftime("%d/%m/%Y %H:%M")
             
-        date_label = ctk.CTkLabel(task_frame, text=date_str)
-        date_label.grid(row=0, column=3, padx=5, pady=5)
+        created_date = format_datetime(task.created_at)
+        created_label = ctk.CTkLabel(task_frame, text=created_date)
+        created_label.grid(row=0, column=3, padx=5, pady=5)
+        
+        # Fecha de última actualización
+        updated_date = format_datetime(task.updated_at)
+        updated_label = ctk.CTkLabel(task_frame, text=updated_date)
+        updated_label.grid(row=0, column=4, padx=5, pady=5)
         
         # Frame para los botones de acción
         actions_frame = ctk.CTkFrame(task_frame, fg_color="transparent")
-        actions_frame.grid(row=0, column=4, padx=5, pady=5, sticky="e")
+        actions_frame.grid(row=0, column=5, padx=5, pady=5, sticky="e")
         
         # Botón de editar
         edit_btn = ctk.CTkButton(
