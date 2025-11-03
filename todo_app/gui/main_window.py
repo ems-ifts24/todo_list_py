@@ -54,7 +54,7 @@ class MainWindow(ctk.CTk):
         self.export_service = ExportService()
         
         # Inicializar variables de estado
-        self.current_view = "tasks"  # Vista por defecto
+        self.current_view = "dashboard"  # Vista por defecto (dashboard)
         self.nav_buttons = {}  # Diccionario para los botones de navegación
         self.current_task_id = None  # ID de la tarea actualmente seleccionada
         
@@ -73,7 +73,7 @@ class MainWindow(ctk.CTk):
         # Configurar estilos (después de crear los widgets)
         self._setup_styles()
         
-        # Mostrar la vista de tareas por defecto
+        # Mostrar la vista del dashboard por defecto
         self.show_view(self.current_view)
     
     def _center_window(self):
@@ -204,8 +204,13 @@ class MainWindow(ctk.CTk):
                 hover_color=("gray70", "gray30")
             )
             
-    def show_view(self, view_name: str) -> None:
-        """Muestra la vista especificada."""
+    def show_view(self, view_name: str, filter_status: str = None) -> None:
+        """Muestra la vista especificada con un filtro opcional.
+        
+        Args:
+            view_name: Nombre de la vista a mostrar ('tasks', 'stats', 'settings', 'dashboard')
+            filter_status: Estado por el que filtrar las tareas (opcional)
+        """
         self.current_view = view_name
         
         # Eliminar la vista actual
@@ -221,11 +226,483 @@ class MainWindow(ctk.CTk):
         
         # Mostrar la vista correspondiente
         if view_name == "tasks":
-            self._show_tasks_view()
+            if filter_status:
+                # Si se proporciona un filtro, establecerlo antes de mostrar la vista
+                if not hasattr(self, 'current_status_filter') or self.current_status_filter != filter_status:
+                    self.current_status_filter = filter_status
+                    self.current_page = 1  # Resetear a la primera página al cambiar de filtro
+            self._show_tasks_view(filter_status)
         elif view_name == "stats":
             self._show_stats_view()
         elif view_name == "settings":
             self._show_settings_view()
+        elif view_name == "dashboard":
+            # Limpiar filtros al volver al dashboard
+            if hasattr(self, 'current_status_filter'):
+                del self.current_status_filter
+            self._show_dashboard_view()
+    
+    def _show_dashboard_view(self) -> None:
+        """Muestra la vista del dashboard."""
+        # Limpiar el contenido actual
+        for widget in self.main_content.winfo_children():
+            widget.destroy()
+            
+        # Título del dashboard
+        label = ctk.CTkLabel(
+            self.main_content,
+            text="Dashboard",
+            font=ctk.CTkFont(size=24, weight="bold")
+        )
+        label.pack(pady=20)
+        
+        # Aquí puedes agregar los widgets del dashboard
+        # Por ejemplo, tarjetas con resúmenes, gráficos, etc.
+        ctk.CTkLabel(
+            self.main_content,
+            text="Resumen de Actividades",
+            font=ctk.CTkFont(size=18, weight="bold")
+        ).pack(pady=10)
+        
+        # Frame para las tarjetas de resumen
+        cards_frame = ctk.CTkFrame(self.main_content, fg_color="transparent")
+        cards_frame.pack(fill="x", pady=20, padx=20)  # Aumentado el padding vertical
+        
+        # Configuración común para todas las tarjetas
+        card_config = {
+            "width": 200,
+            "height": 120,  # Altura fija para las tarjetas
+            "corner_radius": 12,
+            "border_width": 3,
+            "fg_color": ("white", "gray10")
+        }
+        
+        # Estilo para el texto de las tarjetas
+        label_style = {
+            "font": ctk.CTkFont(size=14, weight="bold"),
+            "text_color": ("gray30", "gray70")
+        }
+        
+        count_style = {
+            "font": ctk.CTkFont(size=28, weight="bold"),
+            "text_color": ("gray10", "gray90")
+        }
+        
+        # Función para manejar el clic en las tarjetas
+        def create_card_click_handler(status):
+            def handler(event):
+                self.show_view("tasks", status)
+            return handler
+        
+        # Tarjeta de tareas pendientes (borde naranja)
+        pending_card = ctk.CTkFrame(
+            cards_frame,
+            **card_config,
+            border_color=("#FF8C00", "#FFA500"),  # Naranja
+            cursor="hand2"
+        )
+        pending_card.pack_propagate(False)
+        pending_card.pack(side="left", padx=10, pady=5, fill="both", expand=True)
+        pending_card.bind("<Button-1>", create_card_click_handler("Tareas Pendientes"))
+        
+        # Hacer que los hijos también sean clickeables
+        for child in [pending_card]:
+            child.bind("<Button-1>", create_card_click_handler("Tareas Pendientes"))
+        
+        ctk.CTkLabel(
+            pending_card,
+            text="Tareas Pendientes",
+            **label_style,
+            cursor="hand2"
+        ).pack(pady=(25, 10))
+        
+        self.pending_count = ctk.CTkLabel(
+            pending_card,
+            text="0",
+            **count_style,
+            cursor="hand2"
+        )
+        self.pending_count.pack()
+        
+        # Tarjeta de tareas en curso (borde azul)
+        in_progress_card = ctk.CTkFrame(
+            cards_frame,
+            **card_config,
+            border_color=("#1E90FF", "#4169E1"),  # Azul
+            cursor="hand2"
+        )
+        in_progress_card.pack_propagate(False)
+        in_progress_card.pack(side="left", padx=10, pady=5, fill="both", expand=True)
+        in_progress_card.bind("<Button-1>", create_card_click_handler("En Curso"))
+        
+        # Hacer que los hijos también sean clickeables
+        for child in [in_progress_card]:
+            child.bind("<Button-1>", create_card_click_handler("En Curso"))
+        
+        ctk.CTkLabel(
+            in_progress_card,
+            text="En Curso",
+            **label_style,
+            cursor="hand2"
+        ).pack(pady=(25, 10))
+        
+        self.overdue_count = ctk.CTkLabel(
+            in_progress_card,
+            text="0",
+            **count_style,
+            cursor="hand2"
+        )
+        self.overdue_count.pack()
+        
+        # Tarjeta de tareas finalizadas (borde verde)
+        completed_card = ctk.CTkFrame(
+            cards_frame,
+            **card_config,
+            border_color=("#32CD32", "#2E8B57"),  # Verde
+            cursor="hand2"
+        )
+        completed_card.pack_propagate(False)
+        completed_card.pack(side="left", padx=10, pady=5, fill="both", expand=True)
+        completed_card.bind("<Button-1>", create_card_click_handler("Tareas Finalizadas"))
+        
+        # Hacer que los hijos también sean clickeables
+        for child in [completed_card]:
+            child.bind("<Button-1>", create_card_click_handler("Tareas Finalizadas"))
+        
+        ctk.CTkLabel(
+            completed_card,
+            text="Tareas Finalizadas",
+            **label_style,
+            cursor="hand2"
+        ).pack(pady=(25, 10))
+        
+        self.completed_count = ctk.CTkLabel(
+            completed_card,
+            text="0",
+            **count_style,
+            cursor="hand2"
+        )
+        self.completed_count.pack()
+        
+        # Establecer el padding para el contenedor de tarjetas
+        cards_frame.pack_configure(padx=20, pady=15)
+        
+        # Contenedor para la barra de progreso
+        progress_frame = ctk.CTkFrame(self.main_content, fg_color="transparent")
+        progress_frame.pack(fill="x", pady=(20, 10), padx=20)
+        
+        # Etiqueta del progreso
+        self.progress_label = ctk.CTkLabel(
+            progress_frame,
+            text="Progreso general: 0%",
+            font=ctk.CTkFont(weight="bold")
+        )
+        self.progress_label.pack(anchor="w", pady=(0, 5))
+        
+        # Barra de progreso
+        self.progress_bar = ctk.CTkProgressBar(
+            progress_frame,
+            height=20,
+            corner_radius=10,
+            progress_color=("#4CAF50", "#2E7D32"),  # Verde
+            fg_color=("#E0E0E0", "#424242")  # Fondo claro/oscuro
+        )
+        self.progress_bar.pack(fill="x", pady=(0, 10))
+        self.progress_bar.set(0)  # Inicialmente en 0%
+        
+        # Actualizar los contadores y la barra de progreso
+        self._update_dashboard_counts()
+        
+        # Sección de Racha de Productividad
+        productivity_frame = ctk.CTkFrame(self.main_content, fg_color="transparent")
+        productivity_frame.pack(fill="x", pady=(30, 20), padx=20)
+        
+        # Título de la sección
+        ctk.CTkLabel(
+            productivity_frame,
+            text="📅 Racha de Productividad",
+            font=ctk.CTkFont(size=18, weight="bold")
+        ).pack(anchor="w", pady=(0, 10))
+        
+        # Frame para el gráfico de barras
+        chart_frame = ctk.CTkFrame(productivity_frame, fg_color=("#f5f5f5", "#1a1a1a"), corner_radius=12)
+        chart_frame.pack(fill="both", expand=True)
+        
+        # Contenedor principal para el gráfico
+        self.chart_container = ctk.CTkFrame(chart_frame, fg_color="transparent")
+        self.chart_container.pack(fill="both", expand=True, padx=20, pady=20)
+        
+        # Inicializar el gráfico
+        self._init_productivity_chart()
+        
+    def _update_dashboard_counts(self):
+        """Actualiza los contadores del dashboard y la barra de progreso."""
+        try:
+            tasks = self.task_service.get_all_tasks()
+            total_tasks = len(tasks)
+            
+            # Contar tareas por estado
+            pending = 0
+            completed = 0
+            in_progress = 0
+            
+            for task in tasks:
+                if task.status == Status.COMPLETED:
+                    completed += 1
+                elif task.status == Status.IN_PROGRESS:
+                    in_progress += 1
+                else:  # PENDING
+                    pending += 1
+            
+            # Actualizar las etiquetas
+            self.pending_count.configure(text=str(pending))
+            self.completed_count.configure(text=str(completed))
+            self.overdue_count.configure(text=str(in_progress))
+            
+            # Actualizar la barra de progreso
+            if total_tasks > 0:
+                progress = completed / total_tasks
+                self.progress_bar.set(progress)
+                self.progress_label.configure(
+                    text=f"Progreso general: {int(progress * 100)}%"
+                )
+            else:
+                self.progress_bar.set(0)
+                self.progress_label.configure(text="Progreso general: 0%")
+            
+            # Actualizar el gráfico de productividad
+            self._update_productivity_chart()
+            
+        except Exception as e:
+            print(f"Error al actualizar el dashboard: {e}")
+    
+    def _init_productivity_chart(self):
+        """Inicializa el contenedor del gráfico de productividad."""
+        # Limpiar el contenedor si ya existe
+        for widget in self.chart_container.winfo_children():
+            widget.destroy()
+            
+        # Crear el contenedor de barras
+        self.bars_container = ctk.CTkFrame(self.chart_container, fg_color="transparent")
+        self.bars_container.pack(fill="both", expand=True)
+        
+        # Actualizar el gráfico
+        self._update_productivity_chart()
+        
+    def _update_productivity_chart(self):
+        """Actualiza el gráfico de racha de productividad."""
+        try:
+            # Verificar si el contenedor de barras existe
+            if not hasattr(self, 'bars_container') or not self.bars_container.winfo_exists():
+                return
+                
+            # Limpiar el contenedor de barras
+            for widget in self.bars_container.winfo_children():
+                widget.destroy()
+            
+            # Obtener tareas finalizadas en los últimos 7 días
+            completed_tasks = self.task_service.get_completed_tasks_last_week()
+            
+            if not completed_tasks:
+                # Mostrar mensaje si no hay datos
+                no_data_label = ctk.CTkLabel(
+                    self.bars_container,
+                    text="No hay datos de productividad recientes",
+                    text_color=("gray50", "gray60"),
+                    font=ctk.CTkFont(weight="bold")
+                )
+                no_data_label.pack(pady=40)
+                return
+                
+            # Obtener la altura máxima para escalar las barras
+            max_count = max(completed_tasks.values()) if any(completed_tasks.values()) else 1
+            max_height = 150  # Altura máxima en píxeles para la barra más alta
+            
+            # Frame para el título y estadísticas
+            header_frame = ctk.CTkFrame(self.bars_container, fg_color="transparent")
+            header_frame.pack(fill="x", pady=(0, 15))
+            
+            # Título de la sección
+            ctk.CTkLabel(
+                header_frame,
+                text="Tareas finalizadas en los últimos 7 días",
+                font=ctk.CTkFont(size=14, weight="bold")
+            ).pack(side="left")
+            
+            # Estadísticas
+            total_tasks = sum(completed_tasks.values())
+            avg_tasks = total_tasks / len(completed_tasks) if completed_tasks else 0
+            
+            stats_text = f"Total: {total_tasks} | Promedio diario: {avg_tasks:.1f}"
+            ctk.CTkLabel(
+                header_frame,
+                text=stats_text,
+                text_color=("gray50", "gray60"),
+                font=ctk.CTkFont(size=12)
+            ).pack(side="right")
+            
+            # Frame para el gráfico
+            chart_frame = ctk.CTkFrame(self.bars_container, fg_color=("#f5f5f5", "#1a1a1a"), corner_radius=8)
+            chart_frame.pack(fill="both", expand=True, padx=0, pady=0)
+            
+            # Frame para las barras
+            bars_frame = ctk.CTkFrame(chart_frame, fg_color="transparent")
+            bars_frame.pack(side="top", fill="both", expand=True, padx=20, pady=(20, 10))
+            
+            # Frame para las etiquetas de los días
+            days_frame = ctk.CTkFrame(chart_frame, fg_color="transparent")
+            days_frame.pack(side="bottom", fill="x", pady=(0, 10))
+            
+            # Configurar el grid para las columnas
+            num_days = len(completed_tasks)
+            for i in range(num_days):
+                bars_frame.columnconfigure(i, weight=1)
+                days_frame.columnconfigure(i, weight=1)
+            
+            # Crear las barras y etiquetas
+            for i, (date, count) in enumerate(completed_tasks.items()):
+                # Calcular la altura de la barra
+                bar_height = (count / max_count) * max_height if max_count > 0 else 0
+                bar_height = max(10, bar_height)  # Mínimo 10px de altura para que sea visible
+                
+                # Crear el marco de la barra
+                bar_frame = ctk.CTkFrame(bars_frame, fg_color="transparent")
+                bar_frame.grid(row=0, column=i, padx=4, sticky="nsew")
+                bar_frame.columnconfigure(0, weight=1)
+                
+                # Contenedor para la barra y su etiqueta
+                bar_container = ctk.CTkFrame(bar_frame, fg_color="transparent")
+                bar_container.pack(fill="both", expand=True)
+                
+                # Mostrar el contador sobre la barra
+                count_label = ctk.CTkLabel(
+                    bar_container,
+                    text=str(count) if count > 0 else "0",
+                    text_color=("black", "white"),
+                    font=ctk.CTkFont(size=12, weight="bold")
+                )
+                count_label.pack(side="top", pady=(0, 5))
+                
+                # Crear la barra
+                bar_color = "#4CAF50"  # Verde
+                bar = ctk.CTkFrame(
+                    bar_container, 
+                    fg_color=bar_color,
+                    corner_radius=6,
+                    height=bar_height,
+                    width=30
+                )
+                bar.pack(side="bottom", fill="x")
+                
+                # Agregar el día de la semana
+                day_name = date.strftime("%a").upper()  # Nombre corto del día (LUN, MAR, etc.)
+                day_label = ctk.CTkLabel(
+                    days_frame,
+                    text=day_name,
+                    font=ctk.CTkFont(size=12, weight="bold"),
+                    text_color=("gray30", "gray70")
+                )
+                day_label.grid(row=0, column=i, pady=(5, 0))
+                
+                # Agregar la fecha
+                date_label = ctk.CTkLabel(
+                    days_frame,
+                    text=date.strftime("%d/%m"),
+                    text_color=("gray50", "gray60"),
+                    font=ctk.CTkFont(size=11)
+                )
+                date_label.grid(row=1, column=i, pady=(2, 0))
+                
+                # Resaltar el día actual
+                if date == datetime.now().date():
+                    day_label.configure(text_color=("#2196F3", "#64B5F6"))
+                    date_label.configure(text_color=("#2196F3", "#64B5F6"))
+                    bar.configure(fg_color=("#2196F3", "#64B5F6"))  # Azul para el día actual
+                    
+                    # Añadir etiqueta "Hoy"
+                    today_label = ctk.CTkLabel(
+                        bar_frame,
+                        text="HOY",
+                        text_color=("#2196F3", "#64B5F6"),
+                        font=ctk.CTkFont(size=10, weight="bold")
+                    )
+                    today_label.pack(side="top", pady=(0, 5))
+                    
+                    # Mover el contador debajo de la etiqueta "HOY"
+                    count_label.pack_forget()
+                    count_label.pack(side="top", pady=(0, 5))
+                
+                # Función para manejar los tooltips
+                def create_tooltip(widget, text):
+                    # Variable para almacenar el tooltip
+                    tooltip = None
+                    
+                    # Función para verificar si el mouse salió del tooltip
+                    def check_mouse_leave():
+                        nonlocal tooltip
+                        if tooltip is not None and tooltip.winfo_exists():
+                            x, y = tooltip.winfo_pointerxy()
+                            widget_x = widget.winfo_rootx()
+                            widget_y = widget.winfo_rooty()
+                            widget_w = widget.winfo_width()
+                            widget_h = widget.winfo_height()
+                            
+                            if not (widget_x <= x <= widget_x + widget_w and 
+                                   widget_y <= y <= widget_y + widget_h):
+                                tooltip.destroy()
+                    
+                    def show_tooltip(event):
+                        nonlocal tooltip
+                        
+                        # Si ya hay un tooltip, no hacer nada
+                        if tooltip is not None and tooltip.winfo_exists():
+                            return
+                        
+                        # Crear el tooltip
+                        tooltip = ctk.CTkToplevel(widget)
+                        tooltip.overrideredirect(True)
+                        tooltip.attributes("-topmost", True)
+                        
+                        # Obtener posición del mouse
+                        x = widget.winfo_pointerx() + 10
+                        y = widget.winfo_pointery() + 10
+                        tooltip.geometry(f"+{x}+{y}")
+                        
+                        # Crear etiqueta dentro del tooltip
+                        label = ctk.CTkLabel(
+                            tooltip,
+                            text=text,
+                            fg_color=("white", "#2b2b2b"),
+                            corner_radius=6,
+                            padx=10,
+                            pady=5
+                        )
+                        label.pack()
+                        
+                        # Asegurarse de que el tooltip se cierre al salir del widget
+                        def on_leave(event):
+                            if tooltip is not None and tooltip.winfo_exists():
+                                tooltip.destroy()
+                        
+                        # Configurar eventos
+                        widget.bind("<Leave>", on_leave, add="+")
+                        tooltip.bind("<Leave>", lambda e: tooltip.after(100, check_mouse_leave), add="+")
+                    
+                    # Configurar eventos
+                    widget.bind("<Enter>", show_tooltip)
+                    widget.bind("<Leave>", lambda e: tooltip.after(100, check_mouse_leave) if hasattr(tooltip, 'winfo_exists') and tooltip.winfo_exists() else None)
+                
+                # Crear el texto del tooltip
+                tooltip_text = (
+                    f"{date.strftime('%A, %d de %B')}\n"
+                    f"Tareas finalizadas: {count}"
+                )
+                
+                # Configurar el tooltip para el contenedor de la barra
+                create_tooltip(bar_container, tooltip_text)
+                
+        except Exception as e:
+            print(f"Error al actualizar el gráfico de productividad: {e}")
     
     def _show_stats_view(self) -> None:
         """Muestra la vista de estadísticas."""
@@ -295,7 +772,7 @@ class MainWindow(ctk.CTk):
         else:
             self.sidebar.configure(fg_color=("gray16", "gray16"))
     
-    def _show_tasks_view(self) -> None:
+    def _show_tasks_view(self, status_filter: str = None) -> None:
         """Muestra la vista de tareas."""
         # Título
         title_label = ctk.CTkLabel(
@@ -305,20 +782,40 @@ class MainWindow(ctk.CTk):
         )
         title_label.pack(pady=(0, 20), anchor="w")
         
-        # Barra de búsqueda y botón de nueva tarea
+        # Barra de búsqueda, filtro y botones
         search_frame = ctk.CTkFrame(self.main_content, fg_color="transparent")
         search_frame.pack(fill="x", pady=(0, 20))
+        
+        # Inicializar el filtro de estado actual si se proporciona
+        if status_filter:
+            self.current_status_filter = status_filter
+            
+        # Frame para la barra de búsqueda y botón de limpiar
+        search_bar_frame = ctk.CTkFrame(search_frame, fg_color="transparent")
+        search_bar_frame.pack(side="left", fill="x", expand=True)
         
         self.search_var = ctk.StringVar()
         self.search_var.trace("w", self._on_search_change)
         
+        # Entrada de búsqueda
         search_entry = ctk.CTkEntry(
-            search_frame,
+            search_bar_frame,
             placeholder_text="Buscar tareas...",
             width=300,
             textvariable=self.search_var
         )
-        search_entry.pack(side="left", padx=(0, 10))
+        search_entry.pack(side="left", padx=(0, 5))
+        
+        # Botón para limpiar búsqueda
+        clear_btn = ctk.CTkButton(
+            search_bar_frame,
+            text="×",
+            width=30,
+            fg_color=("gray70", "gray30"),
+            hover_color=("gray60", "gray40"),
+            command=self._clear_search
+        )
+        clear_btn.pack(side="left")
         
         new_task_btn = ctk.CTkButton(
             search_frame,
@@ -353,6 +850,7 @@ class MainWindow(ctk.CTk):
         # Variable para controlar el orden actual
         self.current_sort_column = "created_at"  # Columna por defecto para ordenar
         self.sort_ascending = True               # Orden ascendente por defecto (más antigua a más reciente)
+        self.current_status_filter = status_filter  # Filtro de estado actual
         
         # Controles de paginación
         self.pagination_outer_frame = ctk.CTkFrame(self.main_content, fg_color="transparent")
@@ -400,6 +898,21 @@ class MainWindow(ctk.CTk):
     def _next_page(self) -> None:
         """Navega a la página siguiente."""
         self.current_page += 1
+        self._load_tasks()
+    
+    def _clear_search(self) -> None:
+        """Limpia el campo de búsqueda, los filtros y actualiza la lista de tareas."""
+        self.search_var.set("")
+        if hasattr(self, 'current_status_filter'):
+            del self.current_status_filter
+        self.current_page = 1
+        self._load_tasks()
+        
+    def _clear_filters(self) -> None:
+        """Limpia todos los filtros y actualiza la lista de tareas."""
+        self.search_var.set("")
+        self.current_status_filter = None
+        self.current_page = 1
         self._load_tasks()
     
     def _on_search_change(self, *args) -> None:
@@ -527,6 +1040,15 @@ class MainWindow(ctk.CTk):
                 task for task in all_tasks
                 if search_term in task.name.lower()
             ]
+        
+        # Filtrar por estado si existe
+        if hasattr(self, 'current_status_filter') and self.current_status_filter:
+            if self.current_status_filter == "Tareas Pendientes":
+                all_tasks = [t for t in all_tasks if t.status == Status.PENDING]
+            elif self.current_status_filter == "En Curso":
+                all_tasks = [t for t in all_tasks if t.status == Status.IN_PROGRESS]
+            elif self.current_status_filter == "Tareas Finalizadas":
+                all_tasks = [t for t in all_tasks if t.status == Status.COMPLETED]
         
         # Ordenar tareas
         if self.current_sort_column:
@@ -936,7 +1458,7 @@ class MainWindow(ctk.CTk):
         
         # Configurar el grid de la barra lateral
         self.sidebar.grid_columnconfigure(0, weight=1)
-        self.sidebar.grid_rowconfigure(3, weight=1)
+        self.sidebar.grid_rowconfigure(5, weight=1)  # Cambiado de 3 a 5 para que el espacio esté después del selector de tema
         
         # Título de la aplicación
         self.logo_label = ctk.CTkLabel(
@@ -949,6 +1471,7 @@ class MainWindow(ctk.CTk):
         
         # Botones de navegación
         nav_items = [
+            ("📊 Dashboard", "dashboard"),
             ("📋 Tareas", "tasks"),
             ("📊 Estadísticas", "stats")
         ]
@@ -965,12 +1488,12 @@ class MainWindow(ctk.CTk):
                 anchor="w",
                 font=ctk.CTkFont(weight="bold")
             )
-            btn.grid(row=i, column=0, padx=20, pady=5, sticky="ew")
+            btn.grid(row=i, column=0, padx=20, pady=2, sticky="ew")  # Reducido el pady de 5 a 2
             self.nav_buttons[view_name] = btn
             
-        # Frame para el selector de tema
+        # Frame para el selector de tema - movido abajo
         theme_frame = ctk.CTkFrame(self.sidebar, fg_color="transparent")
-        theme_frame.grid(row=5, column=0, padx=10, pady=(20, 10), sticky="ew")
+        theme_frame.grid(row=9, column=0, padx=20, pady=(0, 10), sticky="ew")
         
         # Título del selector de tema
         ctk.CTkLabel(
@@ -978,10 +1501,9 @@ class MainWindow(ctk.CTk):
             text="Tema:",
             text_color=("gray10", "gray90"),
             anchor="w"
-        ).pack(side="left", padx=(10, 5))
+        ).pack(side="left", padx=(0, 5))
         
         # Selector de tema
-        # Mapeo entre los valores internos y los textos en español
         self.theme_map = {
             "light": "Claro",
             "dark": "Oscuro"
@@ -1003,9 +1525,9 @@ class MainWindow(ctk.CTk):
             button_hover_color=("gray70", "gray35"),
             text_color=("gray10", "gray90")
         )
-        theme_menu.pack(side="right", padx=(0, 10))
+        theme_menu.pack(side="right")
         
-        # Botón de salir
+        # Botón de salir - movido justo debajo del selector de tema
         exit_btn = ctk.CTkButton(
             self.sidebar,
             text="🚪 Salir",
@@ -1014,7 +1536,7 @@ class MainWindow(ctk.CTk):
             hover_color="#c0392b",
             command=self.quit
         )
-        exit_btn.grid(row=10, column=0, padx=20, pady=20, sticky="s")
+        exit_btn.grid(row=10, column=0, padx=20, pady=(0, 20), sticky="ew")
     
     def _create_main_content(self) -> None:
         """Crea el área de contenido principal."""
@@ -1040,7 +1562,7 @@ class MainWindow(ctk.CTk):
                 hover_color=("gray70", "gray30")
             )
             
-    def show_view(self, view_name: str) -> None:
+    def show_view(self, view_name: str, filter_status: Status = None) -> None:
         """Muestra la vista especificada."""
         # Eliminar la vista actual
         for widget in self.main_content.winfo_children():
@@ -1054,8 +1576,10 @@ class MainWindow(ctk.CTk):
                 btn.configure(fg_color="transparent")
         
         # Mostrar la vista correspondiente
-        if view_name == "tasks":
-            self._show_tasks_view()
+        if view_name == "dashboard":
+            self._show_dashboard_view()
+        elif view_name == "tasks":
+            self._show_tasks_view(filter_status)
         elif view_name == "stats":
             self._show_stats_view()
         elif view_name == "settings":

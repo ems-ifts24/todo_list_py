@@ -1,4 +1,5 @@
 import json
+from datetime import datetime, date, timedelta
 from typing import List, Optional, Dict
 from pathlib import Path
 
@@ -166,3 +167,30 @@ class TaskService:
             [t for t in self.tasks.values() if query in t.name.lower()],
             key=lambda t: t.name.lower()
         )
+        
+    def get_completed_tasks_last_week(self) -> Dict[datetime.date, int]:
+        """Obtiene el conteo de tareas completadas por día en los últimos 7 días.
+        
+        Returns:
+            Un diccionario con fechas como claves y el número de tareas completadas como valores
+        """
+        # Inicializar el diccionario con los últimos 7 días
+        today = date.today()
+        date_range = [today - timedelta(days=i) for i in range(6, -1, -1)]
+        completed_tasks = {day: 0 for day in date_range}
+        
+        # Contar tareas completadas por día
+        for task in self.tasks.values():
+            if task.status == Status.COMPLETED and hasattr(task, 'updated_at'):
+                if isinstance(task.updated_at, str):
+                    try:
+                        task_date = datetime.fromisoformat(task.updated_at.replace('Z', '+00:00')).date()
+                    except (ValueError, AttributeError):
+                        continue
+                else:
+                    task_date = task.updated_at.date()
+                
+                if task_date in completed_tasks:
+                    completed_tasks[task_date] += 1
+        
+        return completed_tasks
