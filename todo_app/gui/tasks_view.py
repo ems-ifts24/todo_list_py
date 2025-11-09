@@ -12,10 +12,11 @@ class TasksView(ctk.CTkFrame):
     """
     Vista que muestra la lista de tareas con filtros, paginación y opciones de ordenamiento.
     """
-    def __init__(self, master, task_service: TaskService, main_window):
+    def __init__(self, master, task_service: TaskService, main_window, config_service):
         super().__init__(master, fg_color="transparent")
         self.task_service = task_service
-        self.main_window = main_window  # Referencia a la ventana principal para diálogos
+        self.main_window = main_window
+        self.config_service = config_service
 
         # Inicializar variables de estado
         self.current_status_filter = None
@@ -30,10 +31,23 @@ class TasksView(ctk.CTkFrame):
         self.current_sort_column = "updated_at"
         self.sort_ascending = True
         self.current_page = 1
-        self.tasks_per_page = 8
+        self.tasks_per_page = self.config_service.get("tasks_per_page")
         self.advanced_filters_visible = False
 
         self._create_widgets()
+
+    def update_config(self):
+        """Actualiza la configuración de la vista desde el ConfigService."""
+        self.tasks_per_page = self.config_service.get("tasks_per_page")
+        self.update_colors()
+        self._load_tasks()  # Recargar las tareas para aplicar el paginado
+
+    def update_colors(self):
+        """Actualiza los colores de los widgets para que coincidan con el tema."""
+        temp_button = ctk.CTkButton(self)
+        accent_color = temp_button.cget("fg_color")
+        temp_button.destroy()
+        self.export_btn.configure(fg_color=accent_color, hover_color=accent_color)
 
     def _create_widgets(self):
         """Crea todos los widgets para la vista de tareas."""
@@ -89,15 +103,12 @@ class TasksView(ctk.CTkFrame):
         new_task_btn.pack(side="left", padx=(0, 10))
 
         # Botón para exportar a CSV
-        export_btn = ctk.CTkButton(
+        self.export_btn = ctk.CTkButton(
             search_frame,
             text=" Exportar a CSV",
-            command=self._export_to_csv,
-            fg_color=("#2ecc71", "#27ae60"),
-            hover_color=("#27ae60", "#219653"),
-            text_color=("white", "white")
+            command=self._export_to_csv
         )
-        export_btn.pack(side="left", padx=(0, 10))
+        self.export_btn.pack(side="left", padx=(0, 10))
 
         # Botón para mostrar/ocultar filtros avanzados
         self.show_filters_btn = ctk.CTkButton(
@@ -117,12 +128,14 @@ class TasksView(ctk.CTkFrame):
         # Controles de filtros avanzados
         self._setup_advanced_filters()
 
-        # Contenedor para la lista de tareas
-        self.tasks_container = ctk.CTkFrame(self, fg_color="transparent")
-        self.tasks_container.pack(fill="both", expand=True)
-
-        # Crear encabezados de la tabla
+        # Crear encabezados de la tabla (fuera del área de scroll)
+        self.header_frame = ctk.CTkFrame(self, fg_color="transparent")
+        self.header_frame.pack(fill="x", pady=(25, 5))
         self._create_table_headers()
+
+        # Contenedor para la lista de tareas
+        self.tasks_container = ctk.CTkScrollableFrame(self, fg_color="transparent")
+        self.tasks_container.pack(fill="both", expand=True)
 
         # Controles de paginación
         self.pagination_outer_frame = ctk.CTkFrame(self, fg_color="transparent")
@@ -186,8 +199,11 @@ class TasksView(ctk.CTkFrame):
         self._load_tasks()
 
     def _create_table_headers(self) -> None:
-        header_frame = ctk.CTkFrame(self.tasks_container, fg_color="transparent")
-        header_frame.pack(fill="x", pady=(0, 5))
+        # Limpiar encabezados existentes para redibujar con el indicador de ordenamiento
+        for widget in self.header_frame.winfo_children():
+            widget.destroy()
+
+        header_frame = self.header_frame
         columns = [
             ("name", "Tarea", 6),
             ("priority", "Prioridad", 1),
@@ -392,25 +408,21 @@ class TasksView(ctk.CTkFrame):
         return filtered_tasks
 
     def _load_tasks(self) -> None:
-        """Inicia la carga asíncrona de tareas y muestra un indicador de carga."""
-        # Limpiar la vista de tareas y mostrar un indicador de carga
-        for widget in self.tasks_container.winfo_children():
-            widget.destroy()
-        
-        loading_label = ctk.CTkLabel(self.tasks_container, text="Cargando tareas...", font=ctk.CTkFont(size=16, slant="italic"))
-        loading_label.pack(pady=50)
-
-        # Llamar al método asíncrono del servicio
+        """Inicia la carga asíncrona de tareas."""
+        # Llamar al método asíncrono del servicio, que se encargará de la UI
         self.task_service.load_tasks_async(self._populate_tasks)
 
     def _populate_tasks(self, tasks: Dict[int, Task]) -> None:
         """Puebla la vista con las tareas cargadas. Se ejecuta como callback."""
         def update_ui():
-            # Limpiar el indicador de carga
+            # 1. Limpiar el contenedor de tareas de forma segura
             for widget in self.tasks_container.winfo_children():
                 widget.destroy()
 
+            # 2. Redibujar los encabezados para actualizar el indicador de ordenamiento
             self._create_table_headers()
+
+            # 3. Obtener y mostrar las tareas
             all_filtered_tasks = self._get_filtered_sorted_tasks()
             total_tasks = len(all_filtered_tasks)
             total_pages = max(1, (total_tasks + self.tasks_per_page - 1) // self.tasks_per_page)
@@ -437,7 +449,7 @@ class TasksView(ctk.CTkFrame):
     def _create_task_widget(self, task: Task) -> None:
         is_completed = task.status == Status.COMPLETED
         task_frame = ctk.CTkFrame(self.tasks_container, fg_color=("#f0f0f0", "#2b2b2b"))
-        task_frame.pack(fill="x", pady=2, padx=5)
+        task_frame.pack(fill="x", expand=True, pady=2, padx=5)
         columns = [("name", 6), ("priority", 1), ("status", 2), ("created_at", 2), ("updated_at", 2), ("actions", 1)]
         for idx, (col_id, weight) in enumerate(columns):
             task_frame.columnconfigure(idx, weight=weight)

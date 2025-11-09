@@ -12,6 +12,7 @@ import webbrowser
 
 from ..models.task import Task, Priority, Status
 from ..services.task_service import TaskService
+from ..services.config_service import ConfigService
 from ..services.graphics_service import GraphicsService
 from .tasks_view import TasksView
 from .dashboard_view import DashboardView
@@ -42,26 +43,26 @@ class MainWindow(ctk.CTk):
         
         # Centrar la ventana después de que esté completamente creada
         self.after(100, self._center_window)
-        
-        # Configurar tema por defecto en español
-        self.current_theme = "Oscuro"  # Tema predeterminado en español
-        ctk.set_appearance_mode("dark")
-        
+
         # Configurar el grid principal
         self.grid_rowconfigure(0, weight=1)
         self.grid_columnconfigure(1, weight=1)
         
         # Inicializar servicios
+        self.config_service = ConfigService()
         self.task_service = TaskService()
+
+        # Aplicar configuración inicial
+        self._apply_initial_config()
         
         # Inicializar servicio de exportación (importación diferida para evitar dependencia circular)
         from ..services.export_service import ExportService
         self.export_service = ExportService()
         
         # Inicializar variables de estado
-        self.current_view = "dashboard"  # Vista por defecto (dashboard)
-        self.nav_buttons = {}  # Diccionario para los botones de navegación
-        self.current_task_id = None  # ID de la tarea actualmente seleccionada
+        self.current_view = self.config_service.get("start_view")
+        self.nav_buttons = {}
+        self.views = {}  # Cache para las vistas
         
         
         # Crear la interfaz
@@ -217,144 +218,49 @@ class MainWindow(ctk.CTk):
             )
             
     def display_view(self, view_name: str, filter_status: str = None) -> None:
-        """Muestra la vista especificada. Versión refactorizada."""
+        """Muestra la vista especificada, usando un sistema de cache."""
+        # Ocultar la vista actual
+        if self.current_view in self.views:
+            self.views[self.current_view].pack_forget()
+
         self.current_view = view_name
 
-        # Limpiar el contenido principal
-        for widget in self.main_content.winfo_children():
-            widget.destroy()
+        # Si la vista no está en cache, crearla
+        if view_name not in self.views:
+            if view_name == "dashboard":
+                self.views[view_name] = DashboardView(self.main_content, self.task_service, self)
+            elif view_name == "tasks":
+                self.views[view_name] = TasksView(self.main_content, self.task_service, self, self.config_service)
+            elif view_name == "stats":
+                self.views[view_name] = StatsView(self.main_content, self.task_service, self)
+            elif view_name == "settings":
+                self.views[view_name] = SettingsView(self.main_content, self, self.config_service, self.task_service, self.export_service)
+
+        # Mostrar la nueva vista
+        current_view_widget = self.views[view_name]
+        current_view_widget.pack(fill="both", expand=True)
+
+        # Actualizar configuraciones específicas de la vista si es necesario
+        if view_name == "tasks":
+            current_view_widget.update_config()
+            if filter_status:
+                current_view_widget.set_status_filter(filter_status)
 
         # Actualizar el estilo de los botones de navegación
-        for name, btn in self.nav_buttons.items():
-            btn.configure(fg_color=("gray75", "gray25") if name == view_name else "transparent")
-
-        # Cargar la vista seleccionada
-        if view_name == "dashboard":
-            dashboard_view = DashboardView(self.main_content, self.task_service, self)
-            dashboard_view.pack(fill="both", expand=True)
-        elif view_name == "tasks":
-            # Instanciar y mostrar la vista de tareas
-            tasks_view = TasksView(self.main_content, self.task_service, self)
-            tasks_view.pack(fill="both", expand=True)
-            if filter_status:
-                tasks_view.set_status_filter(filter_status)
-        elif view_name == "stats":
-            stats_view = StatsView(self.main_content, self.task_service, self)
-            stats_view.pack(fill="both", expand=True)
-        elif view_name == "settings":
-            settings_view = SettingsView(self.main_content, self)
-            settings_view.pack(fill="both", expand=True)
+        self._setup_styles()
 
     
     def _refresh_tasks_view(self):
-        """Busca la vista de tareas actual y la recarga."""
-        for widget in self.main_content.winfo_children():
-            if isinstance(widget, TasksView):
-                widget._load_tasks()
-                break
+        """Recarga la vista de tareas desde el cache."""
+        if "tasks" in self.views:
+            self.views["tasks"]._load_tasks()
 
-    def _change_theme(self, new_theme: str) -> None:
-        """Cambia el tema de la aplicación."""
-        theme_map = {
-            "Oscuro": "dark",
-            "Claro": "light"
-        }
-        
-        # Actualizar el tema
-        mode = theme_map.get(new_theme, "dark")
-        ctk.set_appearance_mode(mode)
-        
-        # Actualizar el tema actual
-        self.current_theme = new_theme
-        
-        # Actualizar colores de la barra lateral según el tema
-        if mode == "light":
-            self.sidebar.configure(fg_color="gray90")
-        else:
-            self.sidebar.configure(fg_color=("gray16", "gray16"))
-    
-    
-    
-    
-    
-        dialog = ctk.CTkToplevel(self)
-        dialog.title("Confirmar Finalización")
-        dialog.resizable(True, True)  # Hacer redimensionable
-        dialog.minsize(450, 200)  # Tamaño mínimo
-        dialog.geometry("550x220")  # Tamaño inicial
-        self._setup_window_resize_handler(dialog, "Confirmar Finalización")
-        
-        # Hacer que el diálogo sea modal
-        dialog.transient(self)
-        dialog.grab_set()
-        
-        # Configurar comportamiento al cerrar
-        dialog.protocol("WM_DELETE_WINDOW", dialog.destroy)
-        
-        # Frame principal con padding
-        main_frame = ctk.CTkFrame(dialog, corner_radius=10)
-        main_frame.pack(padx=20, pady=20, fill="both", expand=True)
-        
-        # Mensaje de confirmación
-        msg = f"¿Estás seguro de que deseas marcar la tarea como completada?\n\n{task.name}"
-        label = ctk.CTkLabel(
-            main_frame,
-            text=msg,
-            font=ctk.CTkFont(size=14, weight="bold"),
-            wraplength=400,
-            justify="center"
-        )
-        label.pack(pady=(20, 30), padx=20)
-        
-        # Frame para los botones
-        button_frame = ctk.CTkFrame(main_frame, fg_color="transparent")
-        button_frame.pack(fill="x", padx=20, pady=(0, 10))
-        
-        # Botón de confirmar
-        confirm_btn = ctk.CTkButton(
-            button_frame,
-            text="Sí, marcar como completada",
-            fg_color=("#2ecc71", "#27ae60"),
-            hover_color=("#27ae60", "#219653"),
-            command=lambda: self._complete_task(dialog, task),
-            height=40,
-            font=ctk.CTkFont(weight="bold")
-        )
-        confirm_btn.pack(side="left", expand=True, fill="x", padx=5)
-        
-        # Botón de cancelar
-        cancel_btn = ctk.CTkButton(
-            button_frame,
-            text="Cancelar",
-            fg_color=("#95a5a6", "#7f8c8d"),
-            hover_color=("#7f8c8d", "#6c7a7a"),
-            command=dialog.destroy,
-            height=40,
-            font=ctk.CTkFont(weight="bold")
-        )
-        cancel_btn.pack(side="right", expand=True, fill="x", padx=5)
-        
-        # Ajustar tamaño automáticamente
-        dialog.update_idletasks()
-        
-        # Centrar el diálogo en la pantalla
-        screen_width = self.winfo_screenwidth()
-        screen_height = self.winfo_screenheight()
-        
-        # Obtener el tamaño del diálogo
-        dialog.update_idletasks()
-        width = dialog.winfo_width()
-        height = dialog.winfo_height()
-        
-        # Calcular posición
-        x = (screen_width // 2) - (width // 2)
-        y = (screen_height // 2) - (height // 2)
-        
-        # Aplicar geometría
-        dialog.geometry(f"{width}x{height}+{x}+{y}")
-        
-        # Forzar el foco
-        dialog.focus_force()
+    def _apply_initial_config(self):
+        """Aplica la configuración guardada al iniciar la aplicación."""
+        ctk.set_appearance_mode(self.config_service.get("appearance_mode").lower())
+        ctk.set_default_color_theme(self.config_service.get("color_theme"))
+
+
     
     def _complete_task(self, dialog, task: Task) -> None:
         """Marca una tarea como completada."""
@@ -410,43 +316,22 @@ class MainWindow(ctk.CTk):
             btn.grid(row=i, column=0, padx=20, pady=2, sticky="ew")  # Reducido el pady de 5 a 2
             self.nav_buttons[view_name] = btn
             
-        # Frame para el selector de tema - movido abajo
-        theme_frame = ctk.CTkFrame(self.sidebar, fg_color="transparent")
-        theme_frame.grid(row=9, column=0, padx=20, pady=(0, 10), sticky="ew")
         
-        # Título del selector de tema
-        ctk.CTkLabel(
-            theme_frame, 
-            text="Tema:",
+        # Botón de Configuración
+        settings_btn = ctk.CTkButton(
+            self.sidebar,
+            text="⚙️ Configuración",
+            command=lambda: self.display_view("settings"),
+            fg_color="transparent",
             text_color=("gray10", "gray90"),
-            anchor="w"
-        ).pack(side="left", padx=(0, 5))
-        
-        # Selector de tema
-        self.theme_map = {
-            "light": "Claro",
-            "dark": "Oscuro"
-        }
-        
-        # Obtener el tema actual en español
-        current_mode = ctk.get_appearance_mode()
-        current_theme = self.theme_map.get(current_mode, "Oscuro")
-        
-        self.theme_var = ctk.StringVar(value=current_theme)
-        theme_menu = ctk.CTkOptionMenu(
-            theme_frame,
-            values=["Oscuro", "Claro"],
-            variable=self.theme_var,
-            command=self._change_theme,
-            width=100,
-            dropdown_fg_color=("gray90", "gray16"),
-            button_color=("gray60", "gray40"),
-            button_hover_color=("gray70", "gray35"),
-            text_color=("gray10", "gray90")
+            hover_color=("gray70", "gray30"),
+            anchor="w",
+            font=ctk.CTkFont(weight="bold")
         )
-        theme_menu.pack(side="right")
-        
-        # Botón de salir - movido justo debajo del selector de tema
+        settings_btn.grid(row=9, column=0, padx=20, pady=2, sticky="ew")
+        self.nav_buttons["settings"] = settings_btn
+
+        # Botón de salir
         exit_btn = ctk.CTkButton(
             self.sidebar,
             text="🚪 Salir",
@@ -455,7 +340,7 @@ class MainWindow(ctk.CTk):
             hover_color="#c0392b",
             command=self.quit
         )
-        exit_btn.grid(row=10, column=0, padx=20, pady=(0, 20), sticky="ew")
+        exit_btn.grid(row=10, column=0, padx=20, pady=(10, 20), sticky="ew")
     
     def _create_main_content(self) -> None:
         """Crea el área de contenido principal."""
@@ -468,41 +353,20 @@ class MainWindow(ctk.CTk):
         # Asegurarse de que nav_buttons existe
         if not hasattr(self, 'nav_buttons') or not self.nav_buttons:
             return
-            
-        # Configurar colores para los botones de navegación activos/inactivos
-        active_color = ("gray75", "gray25")  # Color para el botón activo
-        
+
+        # Obtener el color de acento del tema actual de forma segura
+        temp_button = ctk.CTkButton(self)
+        accent_color = temp_button.cget("fg_color")
+        temp_button.destroy()
+
         # Aplicar estilos a los botones de navegación
         for view_name, btn in self.nav_buttons.items():
             is_active = view_name == self.current_view
             btn.configure(
-                fg_color=active_color if is_active else "transparent",
-                text_color=("gray10", "gray90"),
-                hover_color=("gray70", "gray30")
+                fg_color=accent_color if is_active else "transparent",
+                hover_color=accent_color  # Usar también para el hover
             )
             
-    def show_view(self, view_name: str, filter_status: Status = None) -> None:
-        """Muestra la vista especificada."""
-        # Eliminar la vista actual
-        for widget in self.main_content.winfo_children():
-            widget.destroy()
-        
-        # Actualizar estado de los botones de navegación
-        for name, btn in self.nav_buttons.items():
-            if name == view_name:
-                btn.configure(fg_color=("gray75", "gray25"))
-            else:
-                btn.configure(fg_color="transparent")
-        
-        # Mostrar la vista correspondiente
-        if view_name == "dashboard":
-            self._show_dashboard_view()
-        elif view_name == "tasks":
-            self._show_tasks_view(filter_status)
-        elif view_name == "stats":
-            self._show_stats_view()
-        elif view_name == "settings":
-            self._show_settings_view()
     
     def _show_task_dialog(self, task: Optional[Task] = None) -> None:
         """Muestra el diálogo para crear o editar una tarea."""

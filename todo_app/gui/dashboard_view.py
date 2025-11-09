@@ -24,6 +24,7 @@ class DashboardView(ctk.CTkFrame):
         self._update_dashboard_counts()
         self._update_productivity_chart()
 
+
     def _create_widgets(self) -> None:
         """Crea los widgets del dashboard."""
         # Título del dashboard
@@ -67,6 +68,11 @@ class DashboardView(ctk.CTkFrame):
             def handler(event):
                 self.main_window.display_view("tasks", status)
             return handler
+
+        # Obtener el color de acento de forma segura
+        temp_button = ctk.CTkButton(self)
+        accent_color = temp_button.cget("fg_color")
+        temp_button.destroy()
 
         # Tarjeta de tareas pendientes
         pending_card = ctk.CTkFrame(cards_frame, **card_config, border_color=("#FF8C00", "#FFA500"), cursor="hand2")
