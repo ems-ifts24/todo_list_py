@@ -1,6 +1,8 @@
 import json
+import threading
+import time
 from datetime import datetime, date, timedelta
-from typing import List, Optional, Dict
+from typing import List, Optional, Dict, Callable
 from pathlib import Path
 
 from ..models.task import Task, Priority, Status
@@ -20,8 +22,8 @@ class TaskService:
         self.data_file = self.data_dir / data_file
         self.tasks: Dict[int, Task] = {}
         self._ensure_data_dir_exists()
-        self._load_tasks()
-        self._next_id = max(self.tasks.keys(), default=0) + 1
+        # La carga inicial se hará de forma asíncrona desde la UI
+        self._next_id = 0
 
     def _ensure_data_dir_exists(self) -> None:
         """Asegura que exista el directorio de datos."""
@@ -29,17 +31,30 @@ class TaskService:
         if not self.data_file.exists():
             self.data_file.write_text("[]", encoding="utf-8")
 
-    def _load_tasks(self) -> None:
-        """Carga las tareas desde el archivo JSON."""
-        try:
-            with open(self.data_file, 'r', encoding='utf-8') as f:
-                tasks_data = json.load(f)
-                self.tasks = {
-                    task_data['id']: Task.from_dict(task_data)
-                    for task_data in tasks_data
-                }
-        except (json.JSONDecodeError, FileNotFoundError):
-            self.tasks = {}
+    def load_tasks_async(self, callback: Callable[[Dict[int, Task]], None]) -> None:
+        """Carga las tareas de forma asíncrona en un hilo separado."""
+        def _load_in_thread():
+            # Simular una carga más lenta para que el indicador sea visible
+            time.sleep(0.5)
+            try:
+                with open(self.data_file, 'r', encoding='utf-8') as f:
+                    tasks_data = json.load(f)
+                    tasks = {
+                        task_data['id']: Task.from_dict(task_data)
+                        for task_data in tasks_data
+                    }
+                    self.tasks = tasks
+                    self._next_id = max(self.tasks.keys(), default=0) + 1
+            except (json.JSONDecodeError, FileNotFoundError):
+                self.tasks = {}
+                self._next_id = 1
+            
+            # Ejecutar el callback en el hilo principal cuando la carga esté completa
+            callback(self.tasks)
+
+        thread = threading.Thread(target=_load_in_thread)
+        thread.daemon = True
+        thread.start()
 
     def _save_tasks(self) -> None:
         """Guarda las tareas en el archivo JSON."""

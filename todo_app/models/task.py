@@ -1,12 +1,27 @@
 from datetime import datetime
 from enum import Enum
+from functools import total_ordering
 from typing import Optional, Dict, Any
 
 
+@total_ordering
 class Priority(Enum):
     HIGH = "ALTA"
     MEDIUM = "MEDIA"
     LOW = "BAJA"
+
+    @property
+    def _sort_order(self):
+        return {
+            Priority.LOW: 0,
+            Priority.MEDIUM: 1,
+            Priority.HIGH: 2
+        }.get(self, -1)
+
+    def __lt__(self, other):
+        if not isinstance(other, Priority):
+            return NotImplemented
+        return self._sort_order < other._sort_order
 
 class Status(Enum):
     PENDING = "PENDIENTE"
