@@ -238,6 +238,10 @@ class MainWindow(ctk.CTk):
             tasks_view.pack(fill="both", expand=True)
             if filter_status:
                 tasks_view.set_status_filter(filter_status)
+        elif view_name == "simulation":
+            from .simulation_view import SimulationView
+            simulation_view = SimulationView(self.main_content, self)
+            simulation_view.pack(fill="both", expand=True)
         elif view_name == "stats":
             stats_view = StatsView(self.main_content, self.task_service, self)
             stats_view.pack(fill="both", expand=True)
@@ -392,6 +396,7 @@ class MainWindow(ctk.CTk):
         nav_items = [
             ("📊 Dashboard", "dashboard"),
             ("📋 Tareas", "tasks"),
+            ("🧪 Simulación", "simulation"),
             ("📊 Estadísticas", "stats")
         ]
         
