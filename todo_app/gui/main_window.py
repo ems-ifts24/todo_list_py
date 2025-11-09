@@ -780,15 +780,24 @@ class MainWindow(ctk.CTk):
             text=" Mis Tareas",
             font=ctk.CTkFont(size=24, weight="bold")
         )
-        title_label.pack(pady=(0, 20), anchor="w")
+        title_label.pack(pady=(0, 10), anchor="w")
         
-        # Barra de búsqueda, filtro y botones
-        search_frame = ctk.CTkFrame(self.main_content, fg_color="transparent")
-        search_frame.pack(fill="x", pady=(0, 20))
+        # Frame para controles de filtrado
+        filter_frame = ctk.CTkFrame(self.main_content, fg_color="transparent")
+        filter_frame.pack(fill="x", pady=(0, 10))
         
-        # Inicializar el filtro de estado actual si se proporciona
-        if status_filter:
-            self.current_status_filter = status_filter
+        # Filtro de búsqueda
+        search_frame = ctk.CTkFrame(filter_frame, fg_color="transparent")
+        search_frame.pack(side="left", fill="x", expand=True, padx=(0, 10))
+        
+        # Inicializar filtros
+        self.current_status_filter = status_filter
+        self.current_priority_filter = None
+        self.date_filter = {
+            'type': None,  # 'today', 'week', 'month', 'custom'
+            'start': None,
+            'end': None
+        }
             
         # Frame para la barra de búsqueda y botón de limpiar
         search_bar_frame = ctk.CTkFrame(search_frame, fg_color="transparent")
@@ -835,7 +844,25 @@ class MainWindow(ctk.CTk):
             hover_color=("#27ae60", "#219653"),
             text_color=("white", "white")
         )
-        export_btn.pack(side="left")
+        export_btn.pack(side="left", padx=(0, 10))
+        
+        # Botón para mostrar/ocultar filtros avanzados
+        self.show_filters_btn = ctk.CTkButton(
+            search_frame,
+            text="Filtros Avanzados ▼",
+            command=self._toggle_advanced_filters,
+            fg_color=("gray70", "gray30"),
+            hover_color=("gray60", "gray40")
+        )
+        self.show_filters_btn.pack(side="left")
+        
+        # Frame para filtros avanzados (inicialmente oculto)
+        self.advanced_filters_frame = ctk.CTkFrame(self.main_content, fg_color="transparent")
+        self.advanced_filters_frame.pack(fill="x", pady=(0, 10))
+        self.advanced_filters_visible = False
+        
+        # Controles de filtros avanzados
+        self._setup_advanced_filters()
         
         # Contenedor para la lista de tareas
         self.tasks_container = ctk.CTkFrame(
@@ -1031,6 +1058,204 @@ class MainWindow(ctk.CTk):
                 parent=self
             )
     
+    def _setup_advanced_filters(self) -> None:
+        """Configura los controles de filtros avanzados."""
+        # Frame para los filtros de estado
+        status_frame = ctk.CTkFrame(self.advanced_filters_frame, fg_color="transparent")
+        status_frame.pack(fill="x", pady=(0, 10))
+        
+        ctk.CTkLabel(status_frame, text="Estado:").pack(side="left", padx=(0, 5))
+        
+        self.status_var = ctk.StringVar(value="Todas")
+        statuses = ["Todas", "Tareas Pendientes", "En Curso", "Tareas Finalizadas"]
+        
+        for status in statuses:
+            rb = ctk.CTkRadioButton(
+                status_frame,
+                text=status,
+                variable=self.status_var,
+                value=status,
+                command=self._on_status_change
+            )
+            rb.pack(side="left", padx=5)
+        
+        # Frame para los filtros de prioridad
+        priority_frame = ctk.CTkFrame(self.advanced_filters_frame, fg_color="transparent")
+        priority_frame.pack(fill="x", pady=(0, 10))
+        
+        ctk.CTkLabel(priority_frame, text="Prioridad:").pack(side="left", padx=(0, 5))
+        
+        self.priority_var = ctk.StringVar(value="Todas")
+        priorities = ["Todas"] + [p.value for p in Priority]
+        
+        for priority in priorities:
+            rb = ctk.CTkRadioButton(
+                priority_frame,
+                text=priority,
+                variable=self.priority_var,
+                value=priority,
+                command=self._apply_filters
+            )
+            rb.pack(side="left", padx=5)
+        
+        # Frame para los filtros de fecha
+        date_frame = ctk.CTkFrame(self.advanced_filters_frame, fg_color="transparent")
+        date_frame.pack(fill="x", pady=(0, 10))
+        
+        ctk.CTkLabel(date_frame, text="Filtrar por fecha de:").pack(side="left", padx=(0, 5))
+        
+        # Selector de tipo de fecha (creación o actualización)
+        self.date_type_var = ctk.StringVar(value="created_at")
+        date_type_menu = ctk.CTkOptionMenu(
+            date_frame,
+            values=["Creación", "Actualización"],
+            variable=ctk.StringVar(value="Creación"),
+            command=lambda v: self._on_date_type_change(v)
+        )
+        date_type_menu.pack(side="left", padx=5)
+        
+        date_options = ["Sin filtrar", "Hoy", "Esta semana", "Este mes", "Personalizado"]
+        self.date_filter_var = ctk.StringVar(value="Sin filtrar")
+        self.date_filter_menu = ctk.CTkOptionMenu(
+            date_frame,
+            values=date_options,
+            variable=self.date_filter_var,
+            command=self._on_date_filter_change
+        )
+        self.date_filter_menu.pack(side="left", padx=5)
+        
+        # Frame para el rango de fechas personalizado (inicialmente oculto)
+        self.custom_date_frame = ctk.CTkFrame(date_frame, fg_color="transparent")
+        
+        self.start_date_var = ctk.StringVar()
+        self.end_date_var = ctk.StringVar()
+        
+        ctk.CTkLabel(self.custom_date_frame, text="Desde:").pack(side="left")
+        ctk.CTkEntry(self.custom_date_frame, textvariable=self.start_date_var, 
+                    placeholder_text="AAAA-MM-DD", width=100).pack(side="left", padx=5)
+        ctk.CTkLabel(self.custom_date_frame, text="Hasta:").pack(side="left")
+        ctk.CTkEntry(self.custom_date_frame, textvariable=self.end_date_var, 
+                    placeholder_text="AAAA-MM-DD", width=100).pack(side="left", padx=5)
+        
+        # Botón para aplicar filtros
+        buttons_frame = ctk.CTkFrame(self.advanced_filters_frame, fg_color="transparent")
+        buttons_frame.pack(fill="x", pady=(5, 0))
+        
+        clear_btn = ctk.CTkButton(
+            buttons_frame,
+            text="Limpiar Filtros",
+            command=self._clear_filters,
+            fg_color=("gray70", "gray30"),
+            hover_color=("gray60", "gray40")
+        )
+        clear_btn.pack(side="left", padx=5)
+        
+        apply_btn = ctk.CTkButton(
+            buttons_frame,
+            text="Aplicar Filtros",
+            command=self._apply_filters,
+            fg_color=("#2ecc71", "#27ae60"),
+            hover_color=("#27ae60", "#219653")
+        )
+        apply_btn.pack(side="right")
+        
+        # Ocultar filtros avanzados inicialmente
+        self.advanced_filters_frame.pack_forget()
+    
+    def _toggle_advanced_filters(self) -> None:
+        """Muestra u oculta los filtros avanzados."""
+        if self.advanced_filters_visible:
+            self.advanced_filters_frame.pack_forget()
+            self.show_filters_btn.configure(text="Filtros Avanzados ▼")
+        else:
+            self.advanced_filters_frame.pack(fill="x", pady=(0, 10))
+            self.show_filters_btn.configure(text="Ocultar Filtros ▲")
+        
+        self.advanced_filters_visible = not self.advanced_filters_visible
+    
+    def _on_status_change(self) -> None:
+        """Maneja el cambio en el selector de estado."""
+        status_map = {
+            "Todas": None,
+            "Tareas Pendientes": "Tareas Pendientes",
+            "En Curso": "En Curso",
+            "Tareas Finalizadas": "Tareas Finalizadas"
+        }
+        self.current_status_filter = status_map.get(self.status_var.get())
+        self._apply_filters()
+    
+    def _on_date_type_change(self, date_type: str) -> None:
+        """Maneja el cambio en el tipo de fecha (creación/actualización)."""
+        self.date_field = "created_at" if date_type == "Creación" else "updated_at"
+        self._apply_filters()
+    
+    def _on_date_filter_change(self, selected_option: str) -> None:
+        """Maneja el cambio en el selector de fecha."""
+        today = datetime.now().date()
+        
+        if selected_option == "Hoy":
+            self.start_date_var.set(today.strftime("%Y-%m-%d"))
+            self.end_date_var.set(today.strftime("%Y-%m-%d"))
+            self.custom_date_frame.pack_forget()
+            self._apply_filters()
+        elif selected_option == "Esta semana":
+            start = today - timedelta(days=today.weekday())
+            self.start_date_var.set(start.strftime("%Y-%m-%d"))
+            self.end_date_var.set(today.strftime("%Y-%m-%d"))
+            self.custom_date_frame.pack_forget()
+            self._apply_filters()
+        elif selected_option == "Este mes":
+            start = today.replace(day=1)
+            self.start_date_var.set(start.strftime("%Y-%m-%d"))
+            self.end_date_var.set(today.strftime("%Y-%m-%d"))
+            self.custom_date_frame.pack_forget()
+            self._apply_filters()
+        elif selected_option == "Personalizado":
+            self.custom_date_frame.pack(side="left", padx=5)
+        else:
+            self.start_date_var.set("")
+            self.end_date_var.set("")
+            self.custom_date_frame.pack_forget()
+            self._apply_filters()
+    
+    def _apply_filters(self) -> None:
+        """Aplica todos los filtros seleccionados."""
+        # Actualizar filtro de prioridad
+        priority = self.priority_var.get()
+        self.current_priority_filter = priority if priority != "Todas" else None
+        
+        # Actualizar filtro de fecha
+        date_option = self.date_filter_var.get()
+        if date_option == "Sin filtrar":
+            self.start_date_var.set("")
+            self.end_date_var.set("")
+        
+        # Recargar tareas con los nuevos filtros
+        self.current_page = 1
+        self._load_tasks()
+    
+    def _clear_filters(self) -> None:
+        """Limpia todos los filtros aplicados."""
+        if hasattr(self, 'search_var'):
+            self.search_var.set("")
+        
+        if hasattr(self, 'status_var'):
+            self.status_var.set("Todas")
+            self.current_status_filter = None
+        
+        if hasattr(self, 'priority_var'):
+            self.priority_var.set("Todas")
+            self.current_priority_filter = None
+        
+        if hasattr(self, 'date_filter_var'):
+            self.date_filter_var.set("Sin filtrar")
+            self.start_date_var.set("")
+            self.end_date_var.set("")
+            self.custom_date_frame.pack_forget()
+        
+        self.current_page = 1
+        self._load_tasks()
+    
     def _sort_tasks(self, column: str) -> None:
         """Ordena las tareas por la columna especificada."""
         if self.current_sort_column == column:
@@ -1050,39 +1275,71 @@ class MainWindow(ctk.CTk):
     def _get_filtered_sorted_tasks(self):
         """Obtiene las tareas filtradas y ordenadas según los criterios actuales."""
         # Obtener término de búsqueda
-        search_term = self.search_var.get().lower() if hasattr(self, 'search_var') else ""
+        search_term = self.search_var.get().lower() if hasattr(self, 'search_var') and self.search_var.get() else ""
         
         # Obtener tareas sin ordenar del servicio
-        all_tasks = list(self.task_service.tasks.values())  # Obtenemos directamente del diccionario
+        all_tasks = list(self.task_service.tasks.values())
         
-        # Filtrar por término de búsqueda (solo en el nombre de la tarea)
-        if search_term:
-            all_tasks = [
-                task for task in all_tasks
-                if search_term in task.name.lower()
-            ]
+        # Aplicar filtros
+        filtered_tasks = []
         
-        # Filtrar por estado si existe
-        if hasattr(self, 'current_status_filter') and self.current_status_filter:
-            if self.current_status_filter == "Tareas Pendientes":
-                all_tasks = [t for t in all_tasks if t.status == Status.PENDING]
-            elif self.current_status_filter == "En Curso":
-                all_tasks = [t for t in all_tasks if t.status == Status.IN_PROGRESS]
-            elif self.current_status_filter == "Tareas Finalizadas":
-                all_tasks = [t for t in all_tasks if t.status == Status.COMPLETED]
+        for task in all_tasks:
+            # Filtrar por término de búsqueda (nombre o descripción)
+            if search_term:
+                search_in_name = search_term in task.name.lower()
+                search_in_desc = task.description and search_term in task.description.lower()
+                if not (search_in_name or search_in_desc):
+                    continue
+            
+            # Filtrar por estado
+            if hasattr(self, 'current_status_filter') and self.current_status_filter:
+                status_matches = (
+                    (self.current_status_filter == "Tareas Pendientes" and task.status == Status.PENDING) or
+                    (self.current_status_filter == "En Curso" and task.status == Status.IN_PROGRESS) or
+                    (self.current_status_filter == "Tareas Finalizadas" and task.status == Status.COMPLETED)
+                )
+                if not status_matches:
+                    continue
+            
+            # Filtrar por prioridad
+            if hasattr(self, 'current_priority_filter') and self.current_priority_filter:
+                if not task.priority or task.priority.value != self.current_priority_filter:
+                    continue
+            
+            # Filtrar por fecha
+            if hasattr(self, 'start_date_var') and self.start_date_var.get():
+                try:
+                    start_date = datetime.strptime(self.start_date_var.get(), "%Y-%m-%d").date()
+                    end_date = datetime.strptime(self.end_date_var.get(), "%Y-%m-%d").date() if self.end_date_var.get() else start_date
+                    
+                    # Usar el campo de fecha correcto (creación o actualización)
+                    date_field = getattr(self, 'date_field', 'created_at')
+                    task_date = getattr(task, date_field, None)
+                    
+                    if task_date:
+                        task_date = task_date.date()
+                        if not (start_date <= task_date <= end_date):
+                            continue
+                except (ValueError, AttributeError) as e:
+                    # Si hay un error en el formato de fecha o el campo no existe, ignorar el filtro
+                    print(f"Error al filtrar por fecha: {e}")
+                    continue
+            
+            # Si pasa todos los filtros, agregar a la lista
+            filtered_tasks.append(task)
         
         # Ordenar tareas
         if self.current_sort_column:
             reverse = not self.sort_ascending
-            all_tasks.sort(
+            filtered_tasks.sort(
                 key=lambda x: (
                     str(getattr(x, self.current_sort_column, "") or ""),
                     x.name  # Segundo criterio de ordenación
                 ),
                 reverse=reverse
             )
-            
-        return all_tasks
+        
+        return filtered_tasks
     
     def _load_tasks(self) -> None:
         """Carga las tareas desde el servicio y las muestra en la interfaz."""
@@ -1090,6 +1347,9 @@ class MainWindow(ctk.CTk):
         for widget in self.tasks_container.winfo_children():
             if widget != self.tasks_container.winfo_children()[0]:  # No eliminar los encabezados
                 widget.destroy()
+        
+        # Obtener término de búsqueda actual
+        search_term = self.search_var.get().strip() if hasattr(self, 'search_var') and self.search_var.get() else ""
         
         # Obtener tareas filtradas y ordenadas
         all_tasks = self._get_filtered_sorted_tasks()
@@ -1114,9 +1374,37 @@ class MainWindow(ctk.CTk):
             no_tasks_frame = ctk.CTkFrame(self.tasks_container, fg_color="transparent")
             no_tasks_frame.pack(fill="x", pady=10)
             
+            # Construir mensaje descriptivo
+            message = "No hay tareas para mostrar"
+            
+            # Agregar información de filtros activos al mensaje
+            active_filters = []
+            
+            if search_term:
+                active_filters.append(f"búsqueda: '{search_term}'")
+                
+            if hasattr(self, 'current_status_filter') and self.current_status_filter:
+                active_filters.append(f"estado: {self.current_status_filter}")
+                
+            if hasattr(self, 'current_priority_filter') and self.current_priority_filter:
+                active_filters.append(f"prioridad: {self.current_priority_filter}")
+                
+            if hasattr(self, 'date_filter_var') and self.date_filter_var.get() != "Sin filtrar":
+                date_filter = self.date_filter_var.get()
+                if date_filter == "Personalizado" and hasattr(self, 'start_date_var'):
+                    start_date = self.start_date_var.get()
+                    end_date = self.end_date_var.get()
+                    if start_date and end_date:
+                        active_filters.append(f"fecha: {start_date} a {end_date}")
+                else:
+                    active_filters.append(f"fecha: {date_filter}")
+            
+            if active_filters:
+                message = f"No hay tareas que coincidan con {', '.join(active_filters)}"
+            
             no_tasks_label = ctk.CTkLabel(
                 no_tasks_frame,
-                text="No hay tareas para mostrar" if not search_term else f"No se encontraron tareas con: '{search_term}'",
+                text=message,
                 font=ctk.CTkFont(size=14, slant="italic")
             )
             no_tasks_label.pack(pady=20)
