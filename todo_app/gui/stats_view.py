@@ -2,15 +2,10 @@
 Módulo para la vista de Estadísticas.
 """
 import customtkinter as ctk
-import pandas as pd
-from io import BytesIO
-from PIL import Image
-from customtkinter import CTkImage
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolbar2Tk
 
 from ..services.statistics_service import StatisticsService
-from ..models.task import Status
-from datetime import timedelta
+from .simulation_adapter import read_simulated_tasks
 
 class StatsView(ctk.CTkFrame):
     """Clase para la vista de estadísticas."""
@@ -20,6 +15,12 @@ class StatsView(ctk.CTkFrame):
         self.task_service = task_service
         self.main_window = main_window
         self.statistics_service = StatisticsService()
+        self.data_source_options = {
+            "Datos Reales": "real",
+            "Datos Simulados": "simulated"
+        }
+        self.current_data_source = "real"
+        self.data_source_var = ctk.StringVar(value="Datos Reales")
 
         self._create_widgets()
         self._load_summary_stats() # Cargar estadísticas al iniciar
@@ -72,6 +73,16 @@ class StatsView(ctk.CTkFrame):
         selector_frame.grid(row=0, column=1, sticky="nsew")
         ctk.CTkLabel(selector_frame, text="Seleccionar Gráficos", font=ctk.CTkFont(weight="bold")).pack(pady=10)
 
+        ctk.CTkLabel(selector_frame, text="Fuente de datos", font=ctk.CTkFont()).pack(pady=(10, 5), padx=10, anchor="w")
+        self.data_source_selector = ctk.CTkSegmentedButton(
+            selector_frame,
+            values=list(self.data_source_options.keys()),
+            command=self._on_data_source_change,
+            variable=self.data_source_var
+        )
+        self.data_source_selector.pack(fill="x", padx=10, pady=(0, 15))
+        self.data_source_selector.set(self.data_source_var.get())
+
         self.chart_vars = {}
         self.chart_methods = {
             "Tareas por Prioridad": self.statistics_service.get_priority_chart,
@@ -98,7 +109,7 @@ class StatsView(ctk.CTkFrame):
 
 
     def _load_summary_stats(self):
-        tasks = self.task_service.get_all_tasks()
+        tasks = self._get_tasks_by_source()
         stats = self.statistics_service.get_summary_stats(tasks)
         for key, value in stats.items():
             if key in self.summary_cards:
@@ -107,7 +118,7 @@ class StatsView(ctk.CTkFrame):
 
     def _generate_charts(self):
 
-        tasks = self.task_service.get_all_tasks()
+        tasks = self._get_tasks_by_source()
         if not tasks:
             ctk.CTkLabel(self.charts_container, text="No hay tareas para generar estadísticas.").pack(pady=20)
             return
@@ -139,3 +150,12 @@ class StatsView(ctk.CTkFrame):
         toolbar = NavigationToolbar2Tk(canvas, chart_window)
         toolbar.update()
         canvas.get_tk_widget().pack(side=ctk.TOP, fill=ctk.BOTH, expand=True)
+
+    def _on_data_source_change(self, selected_option: str) -> None:
+        self.current_data_source = self.data_source_options.get(selected_option, "real")
+        self._load_summary_stats()
+
+    def _get_tasks_by_source(self):
+        if self.current_data_source == "simulated":
+            return read_simulated_tasks()
+        return self.task_service.get_all_tasks()

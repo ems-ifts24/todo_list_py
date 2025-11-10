@@ -177,6 +177,9 @@ class TasksView(ctk.CTkFrame):
         )
         self.next_btn.pack(side="left", padx=5)
 
+        self.total_label = ctk.CTkLabel(self.pagination_frame, text="Total: 0 registros", text_color=("#1f6aa5", "#5dade2"))
+        self.total_label.pack(side="right", padx=(10, 0))
+
         self._load_tasks()
 
     def set_status_filter(self, status: Optional[str]):
@@ -248,10 +251,12 @@ class TasksView(ctk.CTkFrame):
                 )
                 header.pack(fill="both", expand=True)
 
-    def _update_pagination_controls(self, total_pages: int) -> None:
+    def _update_pagination_controls(self, total_pages: int, total_tasks: int) -> None:
         self.page_label.configure(text=f"Página {self.current_page} de {total_pages if total_pages > 0 else 1}")
         self.prev_btn.configure(state="disabled" if self.current_page <= 1 else "normal")
         self.next_btn.configure(state="disabled" if self.current_page >= total_pages else "normal")
+        if hasattr(self, "total_label"):
+            self.total_label.configure(text=f"Total: {total_tasks} registros")
 
     def _export_to_csv(self):
         try:
@@ -457,7 +462,7 @@ class TasksView(ctk.CTkFrame):
                 for task in tasks_to_show:
                     self._create_task_widget(task)
             
-            self._update_pagination_controls(total_pages)
+            self._update_pagination_controls(total_pages, total_tasks)
 
         # Asegurarse de que la actualización de la UI se ejecute en el hilo principal
         self.main_window.after(0, update_ui)

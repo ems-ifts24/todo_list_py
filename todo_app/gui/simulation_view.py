@@ -112,6 +112,9 @@ class SimulationView(ctk.CTkFrame):
         )
         self.next_btn.pack(side="left", padx=5)
 
+        self.total_label = ctk.CTkLabel(self.pagination_frame, text="Total: 0 registros", text_color=("#1f6aa5", "#5dade2"))
+        self.total_label.pack(side="right", padx=(10, 0))
+
     def _clear_search(self):
         self.search_var.set("")
         self.current_page = 1
@@ -209,12 +212,14 @@ class SimulationView(ctk.CTkFrame):
         else:
             for task in tasks_to_show:
                 self._create_task_widget(task)
-        self._update_pagination_controls(total_pages)
+        self._update_pagination_controls(total_pages, total)
 
-    def _update_pagination_controls(self, total_pages):
+    def _update_pagination_controls(self, total_pages, total_tasks):
         self.page_label.configure(text=f"Página {self.current_page} de {total_pages if total_pages > 0 else 1}")
         self.prev_btn.configure(state="disabled" if self.current_page <= 1 else "normal")
         self.next_btn.configure(state="disabled" if self.current_page >= total_pages else "normal")
+        if hasattr(self, "total_label"):
+            self.total_label.configure(text=f"Total: {total_tasks} registros")
 
     def _prev_page(self):
         if self.current_page > 1:
