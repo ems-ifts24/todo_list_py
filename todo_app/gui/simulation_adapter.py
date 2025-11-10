@@ -36,16 +36,9 @@ def read_simulated_tasks() -> List[Task]:
         data = json.load(f)
     tasks = []
     for d in data:
-        # Convertir los campos según el modelo Task
         try:
-            task = Task(
-                id=d.get("id"),
-                name=d.get("name"),
-                priority=Priority(d.get("priority")) if d.get("priority") else None,
-                status=Status(d.get("status")) if d.get("status") else None,
-                created_at=datetime.fromisoformat(d.get("created_at")) if d.get("created_at") else None,
-                updated_at=datetime.fromisoformat(d.get("updated_at")) if d.get("updated_at") else None
-            )
+            # Reutilizamos la lógica centralizada del modelo para evitar inconsistencias
+            task = Task.from_dict(d)
             tasks.append(task)
         except Exception:
             continue

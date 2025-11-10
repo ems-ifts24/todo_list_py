@@ -102,13 +102,14 @@ class SimulationView(ctk.CTkFrame):
         self.current_page = 1
         self._filter_tasks()
 
-    def _filter_tasks(self):
+    def _filter_tasks(self, reset_page=True):
         term = self.search_var.get().lower()
         if term:
             self.filtered_tasks = [t for t in self.tasks if term in t.name.lower()]
         else:
             self.filtered_tasks = list(self.tasks)
-        self.current_page = 1
+        if reset_page:
+            self.current_page = 1
         self._show_tasks()
 
     def _simulate_data(self):
@@ -117,7 +118,10 @@ class SimulationView(ctk.CTkFrame):
             try:
                 simulate_tasks(cantidad)
                 messagebox.showinfo("Simulación exitosa", f"Se generaron {cantidad} tareas simuladas.")
-                self._load_tasks()
+                self.tasks = read_simulated_tasks()
+                self.filtered_tasks = list(self.tasks)
+                self.current_page = 1
+                self._show_tasks()
             except Exception as e:
                 messagebox.showerror("Error", f"No se pudo simular: {e}")
 
@@ -149,7 +153,7 @@ class SimulationView(ctk.CTkFrame):
 
     def _load_tasks(self):
         self.tasks = read_simulated_tasks()
-        self._filter_tasks()
+        self._filter_tasks(reset_page=False)
 
     def _show_tasks(self):
         for widget in self.tasks_container.winfo_children():
