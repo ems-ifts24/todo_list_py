@@ -2,18 +2,12 @@
 Ventana principal de la aplicación de tareas.
 """
 import customtkinter as ctk
-from typing import Dict, Callable, Any, Optional, List
-import tkinter as tk
-from tkinter import messagebox, ttk, Toplevel, StringVar, BooleanVar, filedialog
-from datetime import datetime, timedelta
-import os
-import re
-import webbrowser
+from typing import Optional
+from .simulation_view import SimulationView
 
-from ..models.task import Task, Priority, Status
+from ..models.task import Task, Status
 from ..services.task_service import TaskService
 from ..services.config_service import ConfigService
-from ..services.graphics_service import GraphicsService
 from .tasks_view import TasksView
 from .dashboard_view import DashboardView
 from .stats_view import StatsView
@@ -231,6 +225,8 @@ class MainWindow(ctk.CTk):
                 self.views[view_name] = DashboardView(self.main_content, self.task_service, self)
             elif view_name == "tasks":
                 self.views[view_name] = TasksView(self.main_content, self.task_service, self, self.config_service)
+            elif view_name == "simulation":
+                self.views[view_name] = SimulationView(self.main_content, self)
             elif view_name == "stats":
                 self.views[view_name] = StatsView(self.main_content, self.task_service, self)
             elif view_name == "settings":
@@ -298,6 +294,7 @@ class MainWindow(ctk.CTk):
         nav_items = [
             ("📊 Dashboard", "dashboard"),
             ("📋 Tareas", "tasks"),
+            ("🧪 Simulación", "simulation"),
             ("📊 Estadísticas", "stats")
         ]
         
