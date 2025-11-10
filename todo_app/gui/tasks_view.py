@@ -34,6 +34,11 @@ class TasksView(ctk.CTkFrame):
         self.tasks_per_page = self.config_service.get("tasks_per_page")
         self.advanced_filters_visible = False
 
+        # Colores personalizados para el botón de exportación
+        self.export_btn_fg_color = ("gray70", "gray30")
+        self.export_btn_hover_color = ("gray60", "gray40")
+        self.export_btn_text_color = ("black", "white")
+
         self._create_widgets()
 
     def update_config(self):
@@ -44,10 +49,12 @@ class TasksView(ctk.CTkFrame):
 
     def update_colors(self):
         """Actualiza los colores de los widgets para que coincidan con el tema."""
-        temp_button = ctk.CTkButton(self)
-        accent_color = temp_button.cget("fg_color")
-        temp_button.destroy()
-        self.export_btn.configure(fg_color=accent_color, hover_color=accent_color)
+        if hasattr(self, "export_btn"):
+            self.export_btn.configure(
+                fg_color=self.export_btn_fg_color,
+                hover_color=self.export_btn_hover_color,
+                text_color=self.export_btn_text_color
+            )
 
     def _create_widgets(self):
         """Crea todos los widgets para la vista de tareas."""
@@ -85,7 +92,7 @@ class TasksView(ctk.CTkFrame):
         # Botón para limpiar búsqueda
         clear_btn = ctk.CTkButton(
             search_bar_frame,
-            text="×",
+            text="Limpiar",
             width=30,
             fg_color=("gray70", "gray30"),
             hover_color=("gray60", "gray40"),
@@ -97,8 +104,9 @@ class TasksView(ctk.CTkFrame):
             search_frame,
             text=" Nueva Tarea",
             command=lambda: self.main_window._show_task_dialog(), # Llama al nuevo diálogo sin tarea
-            fg_color=("gray70", "gray30"),
-            hover_color=("gray60", "gray40")
+            fg_color=("#5dade2", "#1f6aa5"),
+            hover_color=("#54b4e6", "#1a5a94"),
+            text_color=("white", "white")
         )
         new_task_btn.pack(side="left", padx=(0, 10))
 
@@ -106,7 +114,10 @@ class TasksView(ctk.CTkFrame):
         self.export_btn = ctk.CTkButton(
             search_frame,
             text=" Exportar a CSV",
-            command=self._export_to_csv
+            command=self._export_to_csv,
+            fg_color=self.export_btn_fg_color,
+            hover_color=self.export_btn_hover_color,
+            text_color=self.export_btn_text_color
         )
         self.export_btn.pack(side="left", padx=(0, 10))
 
@@ -205,20 +216,25 @@ class TasksView(ctk.CTkFrame):
 
         header_frame = self.header_frame
         columns = [
-            ("name", "Tarea", 6),
-            ("priority", "Prioridad", 1),
-            ("status", "Estado", 2),
-            ("created_at", "Creada", 2),
-            ("updated_at", "Actualizada", 2),
-            ("actions", "Acciones", 1)
+            ("name", "Tarea"),
+            ("priority", "Prioridad"),
+            ("status", "Estado"),
+            ("created_at", "Creada"),
+            ("updated_at", "Actualizada"),
+            ("actions", "Acciones")
         ]
-        for i, (col_id, col_name, weight) in enumerate(columns):
-            header_frame.columnconfigure(i, weight=weight)
+        for i, (col_id, col_name) in enumerate(columns):
+            header_frame.grid_columnconfigure(i, weight=1, uniform="tasks_columns")
             col_frame = ctk.CTkFrame(header_frame, fg_color="transparent")
             col_frame.grid(row=0, column=i, padx=2, pady=2, sticky="nsew")
             if col_id == "actions":
-                header = ctk.CTkLabel(col_frame, text=col_name, font=ctk.CTkFont(weight="bold"), anchor="w")
-                header.pack(fill="x", expand=True, anchor="w")
+                header = ctk.CTkLabel(
+                    col_frame,
+                    text=col_name,
+                    font=ctk.CTkFont(weight="bold"),
+                    anchor="center"
+                )
+                header.pack(fill="both", expand=True)
             else:
                 header = ctk.CTkButton(
                     col_frame,
@@ -227,10 +243,10 @@ class TasksView(ctk.CTkFrame):
                     fg_color="transparent",
                     hover_color=("gray70", "gray30"),
                     text_color=("black", "white"),
-                    anchor="w",
+                    anchor="center",
                     command=lambda c=col_id: self._sort_tasks(c)
                 )
-                header.pack(fill="x", expand=True, anchor="w")
+                header.pack(fill="both", expand=True)
 
     def _update_pagination_controls(self, total_pages: int) -> None:
         self.page_label.configure(text=f"Página {self.current_page} de {total_pages if total_pages > 0 else 1}")
@@ -449,18 +465,18 @@ class TasksView(ctk.CTkFrame):
     def _create_task_widget(self, task: Task) -> None:
         is_completed = task.status == Status.COMPLETED
         task_frame = ctk.CTkFrame(self.tasks_container, fg_color=("#f0f0f0", "#2b2b2b"))
-        task_frame.pack(fill="x", expand=True, pady=2, padx=5)
-        columns = [("name", 6), ("priority", 1), ("status", 2), ("created_at", 2), ("updated_at", 2), ("actions", 1)]
-        for idx, (col_id, weight) in enumerate(columns):
-            task_frame.columnconfigure(idx, weight=weight)
+        task_frame.pack(fill="x", pady=2, padx=5)
+        columns = ["name", "priority", "status", "created_at", "updated_at", "actions"]
+        for idx, _ in enumerate(columns):
+            task_frame.columnconfigure(idx, weight=1, uniform="tasks_columns")
         name_label = ctk.CTkLabel(task_frame, text=task.name, anchor="w", font=ctk.CTkFont(weight="bold", overstrike=is_completed))
-        name_label.grid(row=0, column=0, padx=10, pady=5, sticky="w")
+        name_label.grid(row=0, column=0, padx=10, pady=5, sticky="nsew")
         priority_colors = {Priority.HIGH: "#e74c3c", Priority.MEDIUM: "#f39c12", Priority.LOW: "#2ecc71"}
-        priority_label = ctk.CTkLabel(task_frame, text=task.priority.value if task.priority else "", text_color=priority_colors.get(task.priority, "gray"))
-        priority_label.grid(row=0, column=1, padx=5, pady=5)
+        priority_label = ctk.CTkLabel(task_frame, text=task.priority.value if task.priority else "", text_color=priority_colors.get(task.priority, "gray"), anchor="center")
+        priority_label.grid(row=0, column=1, padx=5, pady=5, sticky="nsew")
         status_colors = {Status.PENDING: "#f39c12", Status.IN_PROGRESS: "#3498db", Status.COMPLETED: "#2ecc71"}
-        status_label = ctk.CTkLabel(task_frame, text=task.status.value if task.status else "", text_color=status_colors.get(task.status, "gray"))
-        status_label.grid(row=0, column=2, padx=5, pady=5)
+        status_label = ctk.CTkLabel(task_frame, text=task.status.value if task.status else "", text_color=status_colors.get(task.status, "gray"), anchor="center")
+        status_label.grid(row=0, column=2, padx=5, pady=5, sticky="nsew")
         def format_datetime_str(dt_obj):
             if not dt_obj: return ""
             try:
@@ -470,22 +486,44 @@ class TasksView(ctk.CTkFrame):
                 return dt_obj.strftime("%d/%m/%Y %H:%M")
             except (ValueError, TypeError):
                 return str(dt_obj)  # Devuelve el objeto original si falla el formateo
-        created_label = ctk.CTkLabel(task_frame, text=format_datetime_str(task.created_at))
-        created_label.grid(row=0, column=3, padx=5, pady=5)
-        updated_label = ctk.CTkLabel(task_frame, text=format_datetime_str(task.updated_at))
-        updated_label.grid(row=0, column=4, padx=5, pady=5)
+        created_label = ctk.CTkLabel(task_frame, text=format_datetime_str(task.created_at), anchor="center")
+        created_label.grid(row=0, column=3, padx=5, pady=5, sticky="nsew")
+        updated_label = ctk.CTkLabel(task_frame, text=format_datetime_str(task.updated_at), anchor="center")
+        updated_label.grid(row=0, column=4, padx=5, pady=5, sticky="nsew")
 
         actions_frame = ctk.CTkFrame(task_frame, fg_color="transparent")
-        actions_frame.grid(row=0, column=5, padx=5, pady=5, sticky="e")
+        actions_frame.grid(row=0, column=5, padx=5, pady=5, sticky="nsew")
+        actions_frame.grid_columnconfigure((0, 1, 2), weight=1, uniform="actions_buttons")
 
         edit_btn = ctk.CTkButton(actions_frame, text="✏️", width=30, height=30, fg_color="transparent", text_color=("#3498db", "#2980b9"), hover_color=("#d6eaf8", "#1a5276"), command=lambda t=task: self.main_window._show_task_dialog(t) if not is_completed else None, state="normal" if not is_completed else "disabled")
-        edit_btn.pack(side="left", padx=2)
+        edit_btn.grid(row=0, column=0, padx=2, pady=0, sticky="nsew")
 
         delete_btn = ctk.CTkButton(actions_frame, text="🗑️", width=30, height=30, fg_color="transparent", text_color=("#e74c3c", "#c0392b"), hover_color=("#f5b7b1", "#78281F"), command=lambda t=task: self._confirm_delete_task(t) if not is_completed else None, state="normal" if not is_completed else "disabled")
-        delete_btn.pack(side="left", padx=2)
+        delete_btn.grid(row=0, column=1, padx=2, pady=0, sticky="nsew")
 
-        complete_btn = ctk.CTkButton(actions_frame, text="✓" if not is_completed else "↩", width=30, height=30, fg_color="transparent", text_color=("#2ecc71", "#27ae60") if not is_completed else ("#f39c12", "#f1c40f"), hover_color=("#d0f5e2", "#1a5276") if not is_completed else ("#f9e79f", "#b7950b"), command=lambda t=task: self._confirm_complete_task(t, False) if not is_completed else self._confirm_complete_task(t, True))
-        complete_btn.pack(side="left", padx=2)
+        if is_completed:
+            complete_btn = ctk.CTkButton(
+                actions_frame,
+                text="✓",
+                width=30,
+                height=30,
+                fg_color=("#f0f0f0", "#2b2b2b"),
+                text_color=("#95a5a6", "#7f8c8d"),
+                hover_color=("#f0f0f0", "#2b2b2b"),
+                state="disabled"
+            )
+        else:
+            complete_btn = ctk.CTkButton(
+                actions_frame,
+                text="✓",
+                width=30,
+                height=30,
+                fg_color="transparent",
+                text_color=("#2ecc71", "#27ae60"),
+                hover_color=("#d0f5e2", "#1a5276"),
+                command=lambda t=task: self._confirm_complete_task(t, False)
+            )
+        complete_btn.grid(row=0, column=2, padx=2, pady=0, sticky="nsew")
 
     def _confirm_delete_task(self, task: Task) -> None:
         dialog = ctk.CTkToplevel(self)

@@ -29,8 +29,14 @@ class SimulationView(ctk.CTkFrame):
         filter_frame = ctk.CTkFrame(self, fg_color="transparent")
         filter_frame.pack(fill="x", pady=(0, 10))
 
+        search_frame = ctk.CTkFrame(filter_frame, fg_color="transparent")
+        search_frame.pack(side="left", fill="x", expand=True, padx=(0, 10))
+
+        search_bar_frame = ctk.CTkFrame(search_frame, fg_color="transparent")
+        search_bar_frame.pack(side="left", fill="x", expand=True)
+
         search_entry = ctk.CTkEntry(
-            filter_frame,
+            search_bar_frame,
             placeholder_text="Buscar tareas...",
             width=300,
             textvariable=self.search_var
@@ -39,8 +45,8 @@ class SimulationView(ctk.CTkFrame):
         self.search_var.trace("w", lambda *args: self._filter_tasks())
 
         clear_btn = ctk.CTkButton(
-            filter_frame,
-            text="×",
+            search_bar_frame,
+            text="Limpiar",
             width=30,
             fg_color=("gray70", "gray30"),
             hover_color=("gray60", "gray40"),
@@ -48,24 +54,33 @@ class SimulationView(ctk.CTkFrame):
         )
         clear_btn.pack(side="left")
 
-        simulate_btn = ctk.CTkButton(
-            filter_frame,
-            text=" Simular Datos",
-            fg_color=("gray70", "gray30"),
-            hover_color=("gray60", "gray40"),
-            command=self._simulate_data
-        )
-        simulate_btn.pack(side="left", padx=(10, 10))
+        buttons_frame = ctk.CTkFrame(filter_frame, fg_color="transparent")
+        buttons_frame.pack(side="right")
 
-        export_btn = ctk.CTkButton(
-            filter_frame,
-            text=" Exportar a CSV",
-            command=self._export_to_csv,
-            fg_color=("#2ecc71", "#27ae60"),
-            hover_color=("#27ae60", "#219653"),
+        simulate_btn = ctk.CTkButton(
+            buttons_frame,
+            text=" Simular Datos",
+            command=self._simulate_data,
+            fg_color=("#5dade2", "#1f6aa5"),
+            hover_color=("#54b4e6", "#1a5a94"),
             text_color=("white", "white")
         )
-        export_btn.pack(side="left", padx=(0, 10))
+        simulate_btn.pack(side="left", padx=(0, 10))
+
+        export_btn = ctk.CTkButton(
+            buttons_frame,
+            text=" Exportar a CSV",
+            command=self._export_to_csv,
+            fg_color=("gray70", "gray30"),
+            hover_color=("gray60", "gray40"),
+            text_color=("black", "white")
+        )
+        export_btn.pack(side="left")
+
+        # Encabezados de la tabla
+        self.header_frame = ctk.CTkFrame(self, fg_color="transparent")
+        self.header_frame.pack(fill="x", pady=(25, 5))
+        self._create_table_headers()
 
         self.tasks_container = ctk.CTkFrame(self, fg_color="transparent")
         self.tasks_container.pack(fill="both", expand=True)
@@ -101,6 +116,29 @@ class SimulationView(ctk.CTkFrame):
         self.search_var.set("")
         self.current_page = 1
         self._filter_tasks()
+
+    def _create_table_headers(self):
+        for widget in self.header_frame.winfo_children():
+            widget.destroy()
+
+        columns = [
+            ("Tarea", 0),
+            ("Prioridad", 1),
+            ("Estado", 2),
+            ("Creada", 3),
+            ("Actualizada", 4),
+            ("Acciones", 5)
+        ]
+
+        for idx, (title, _) in enumerate(columns):
+            self.header_frame.grid_columnconfigure(idx, weight=1, uniform="simulation_columns")
+            header_label = ctk.CTkLabel(
+                self.header_frame,
+                text=title,
+                font=ctk.CTkFont(weight="bold"),
+                anchor="center"
+            )
+            header_label.grid(row=0, column=idx, padx=5, pady=2, sticky="nsew")
 
     def _filter_tasks(self, reset_page=True):
         term = self.search_var.get().lower()
@@ -190,17 +228,17 @@ class SimulationView(ctk.CTkFrame):
     def _create_task_widget(self, task: Task):
         task_frame = ctk.CTkFrame(self.tasks_container, fg_color=("#f0f0f0", "#2b2b2b"))
         task_frame.pack(fill="x", pady=2, padx=5)
-        columns = [("name", 6), ("priority", 1), ("status", 2), ("created_at", 2), ("updated_at", 2), ("actions", 1)]
-        for idx, (col_id, weight) in enumerate(columns):
-            task_frame.columnconfigure(idx, weight=weight)
+        columns = ["name", "priority", "status", "created_at", "updated_at", "actions"]
+        for idx, _ in enumerate(columns):
+            task_frame.columnconfigure(idx, weight=1, uniform="simulation_columns")
         name_label = ctk.CTkLabel(task_frame, text=task.name, anchor="w", font=ctk.CTkFont(weight="bold"))
-        name_label.grid(row=0, column=0, padx=10, pady=5, sticky="w")
+        name_label.grid(row=0, column=0, padx=10, pady=5, sticky="nsew")
         priority_colors = {Priority.HIGH: "#e74c3c", Priority.MEDIUM: "#f39c12", Priority.LOW: "#2ecc71"}
-        priority_label = ctk.CTkLabel(task_frame, text=task.priority.value if task.priority else "", text_color=priority_colors.get(task.priority, "gray"))
-        priority_label.grid(row=0, column=1, padx=5, pady=5)
+        priority_label = ctk.CTkLabel(task_frame, text=task.priority.value if task.priority else "", text_color=priority_colors.get(task.priority, "gray"), anchor="center")
+        priority_label.grid(row=0, column=1, padx=5, pady=5, sticky="nsew")
         status_colors = {Status.PENDING: "#f39c12", Status.IN_PROGRESS: "#3498db", Status.COMPLETED: "#2ecc71"}
-        status_label = ctk.CTkLabel(task_frame, text=task.status.value if task.status else "", text_color=status_colors.get(task.status, "gray"))
-        status_label.grid(row=0, column=2, padx=5, pady=5)
+        status_label = ctk.CTkLabel(task_frame, text=task.status.value if task.status else "", text_color=status_colors.get(task.status, "gray"), anchor="center")
+        status_label.grid(row=0, column=2, padx=5, pady=5, sticky="nsew")
         def format_datetime_str(dt_obj):
             if not dt_obj: return ""
             try:
@@ -209,15 +247,46 @@ class SimulationView(ctk.CTkFrame):
                 return dt_obj.strftime("%d-%m-%Y %H:%M:%S")
             except (ValueError, TypeError):
                 return str(dt_obj)
-        created_label = ctk.CTkLabel(task_frame, text=format_datetime_str(task.created_at))
-        created_label.grid(row=0, column=3, padx=5, pady=5)
-        updated_label = ctk.CTkLabel(task_frame, text=format_datetime_str(task.updated_at))
-        updated_label.grid(row=0, column=4, padx=5, pady=5)
+        created_label = ctk.CTkLabel(task_frame, text=format_datetime_str(task.created_at), anchor="center")
+        created_label.grid(row=0, column=3, padx=5, pady=5, sticky="nsew")
+        updated_label = ctk.CTkLabel(task_frame, text=format_datetime_str(task.updated_at), anchor="center")
+        updated_label.grid(row=0, column=4, padx=5, pady=5, sticky="nsew")
         actions_frame = ctk.CTkFrame(task_frame, fg_color="transparent")
-        actions_frame.grid(row=0, column=5, padx=5, pady=5, sticky="e")
-        edit_btn = ctk.CTkButton(actions_frame, text="✏️", width=30, height=30, fg_color="gray70", text_color="gray60", hover_color="gray80", state="disabled")
-        edit_btn.pack(side="left", padx=2)
-        delete_btn = ctk.CTkButton(actions_frame, text="🗑️", width=30, height=30, fg_color="gray70", text_color="gray60", hover_color="gray80", state="disabled")
-        delete_btn.pack(side="left", padx=2)
-        complete_btn = ctk.CTkButton(actions_frame, text="✓", width=30, height=30, fg_color="gray70", text_color="gray60", hover_color="gray80", state="disabled")
-        complete_btn.pack(side="left", padx=2)
+        actions_frame.grid(row=0, column=5, padx=5, pady=5, sticky="nsew")
+        actions_frame.grid_columnconfigure((0, 1, 2), weight=1, uniform="simulation_actions")
+        disabled_text_color = ("#95a5a6", "#7f8c8d")
+        disabled_bg_color = ("#f0f0f0", "#2b2b2b")
+        disabled_hover_color = disabled_bg_color
+        edit_btn = ctk.CTkButton(
+            actions_frame,
+            text="✏️",
+            width=30,
+            height=30,
+            fg_color=disabled_bg_color,
+            text_color=disabled_text_color,
+            hover_color=disabled_hover_color,
+            state="disabled"
+        )
+        edit_btn.grid(row=0, column=0, padx=2, pady=0, sticky="nsew")
+        delete_btn = ctk.CTkButton(
+            actions_frame,
+            text="🗑️",
+            width=30,
+            height=30,
+            fg_color=disabled_bg_color,
+            text_color=disabled_text_color,
+            hover_color=disabled_hover_color,
+            state="disabled"
+        )
+        delete_btn.grid(row=0, column=1, padx=2, pady=0, sticky="nsew")
+        complete_btn = ctk.CTkButton(
+            actions_frame,
+            text="✓",
+            width=30,
+            height=30,
+            fg_color=disabled_bg_color,
+            text_color=disabled_text_color,
+            hover_color=disabled_hover_color,
+            state="disabled"
+        )
+        complete_btn.grid(row=0, column=2, padx=2, pady=0, sticky="nsew")
