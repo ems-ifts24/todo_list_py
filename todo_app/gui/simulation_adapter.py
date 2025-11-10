@@ -1,7 +1,6 @@
-from datetime import datetime
 from pathlib import Path
 from typing import List
-from ..models.task import Task, Priority, Status
+from ..models.task import Task
 from ..services.data_generator import DataGenerator
 
 # --- Funciones para integración GUI ---

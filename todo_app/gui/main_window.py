@@ -26,7 +26,7 @@ class MainWindow(ctk.CTk):
         
         # Tamaño deseado de la ventana
         self.width = 1100
-        self.height = 600
+        self.height = 800
         
         # Mostrar dimensiones al redimensionar
         self.bind("<Configure>", self._on_window_resize)
@@ -105,15 +105,14 @@ class MainWindow(ctk.CTk):
         
     def _on_window_resize(self, event):
         """Muestra las dimensiones actuales de la ventana en la barra de título."""
-        # Comentado temporalmente para ocultar la resolución
         # if self.winfo_toplevel() == self:  # Solo si es la ventana principal
         #     width = self.winfo_width()
         #     height = self.winfo_height()
         #     self.title(f"Gestor de Tareas - {width}x{height}")
-    
+        # Para volver a mostrar la resolución, descomentar el bloque anterior.
+
     def _setup_window_resize_handler(self, window, base_title):
         """Configura el manejador de redimensionamiento para una ventana."""
-        # Comentado temporalmente para ocultar la resolución
         # def on_resize(event):
         #     width = window.winfo_width()
         #     height = window.winfo_height()
