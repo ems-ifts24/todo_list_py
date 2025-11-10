@@ -507,5 +507,5 @@ class TasksView(ctk.CTkFrame):
         ctk.CTkLabel(dialog, text=f"¿Seguro que quieres {action_text} la tarea '{task.name}'?").pack(pady=20)
         btn_frame = ctk.CTkFrame(dialog, fg_color="transparent")
         btn_frame.pack(pady=10)
-        ctk.CTkButton(btn_frame, text=action_text.capitalize(), command=lambda: (self.task_service.update_task_status(task.id, Status.PENDING if is_reopen else Status.COMPLETED), self._load_tasks(), dialog.destroy())).pack(side="left", padx=10)
+        ctk.CTkButton(btn_frame, text=action_text.capitalize(), command=lambda: (self.task_service.update_task(task_id=task.id, status=Status.PENDING if is_reopen else Status.COMPLETED), self._load_tasks(), dialog.destroy())).pack(side="left", padx=10)
         ctk.CTkButton(btn_frame, text="Cancelar", command=dialog.destroy).pack(side="left", padx=10)
